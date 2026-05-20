@@ -4,4 +4,3 @@ public enum ConversationStatus {
     OPEN,
     CLOSED
 }
-
