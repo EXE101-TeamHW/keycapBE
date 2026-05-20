@@ -18,10 +18,11 @@ public class TicketResponse {
     private LocalDateTime createdAt;
     private String requestDesignName;
     private String referenceImagesJson;
+    private Long customerId;
 
     public TicketResponse(Long id, String ticketCode, Long requestId, Long assignedStaffId, Long adminId,
                           LocalDate deadline, Integer revisionCount, Integer maxRevisions, TicketStatus status,
-                          LocalDateTime createdAt, String requestDesignName, String referenceImagesJson) {
+                          LocalDateTime createdAt, String requestDesignName, String referenceImagesJson, Long customerId) {
         this.id = id;
         this.ticketCode = ticketCode;
         this.requestId = requestId;
@@ -34,6 +35,7 @@ public class TicketResponse {
         this.createdAt = createdAt;
         this.requestDesignName = requestDesignName;
         this.referenceImagesJson = referenceImagesJson;
+        this.customerId = customerId;
     }
 
     public Long getId() { return id; }
@@ -48,4 +50,5 @@ public class TicketResponse {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public String getRequestDesignName() { return requestDesignName; }
     public String getReferenceImagesJson() { return referenceImagesJson; }
+    public Long getCustomerId() { return customerId; }
 }
