@@ -31,4 +31,3 @@ public class Conversation extends BaseEntity {
     @Column(nullable = false)
     private ConversationStatus status = ConversationStatus.OPEN;
 }
-
