@@ -32,6 +32,12 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    public List<TicketResponse> listByUser(Long userId) {
+        return ticketRepository.findByRequestUserId(userId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public TicketResponse getTicket(Long id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
@@ -68,9 +74,12 @@ public class TicketService {
     }
 
     private TicketResponse toResponse(Ticket ticket) {
+        String designName = ticket.getRequest() != null ? ticket.getRequest().getDesignName() : null;
+        String refImages = ticket.getRequest() != null ? ticket.getRequest().getReferenceImagesJson() : null;
         return new TicketResponse(ticket.getId(), ticket.getTicketCode(), ticket.getRequest().getId(),
                 ticket.getAssignedStaff() == null ? null : ticket.getAssignedStaff().getId(),
                 ticket.getAdmin() == null ? null : ticket.getAdmin().getId(), ticket.getDeadline(),
-                ticket.getRevisionCount(), ticket.getMaxRevisions(), ticket.getStatus(), ticket.getCreatedAt());
+                ticket.getRevisionCount(), ticket.getMaxRevisions(), ticket.getStatus(), ticket.getCreatedAt(),
+                designName, refImages);
     }
 }
