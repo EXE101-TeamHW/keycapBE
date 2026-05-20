@@ -55,4 +55,9 @@ public class ConversationController {
                                                    @Valid @RequestBody CloseConversationRequest request) {
         return ApiResponse.success(conversationService.closeConversation(conversationId, request));
     }
+
+    @PostMapping("/messages")
+    public ApiResponse<MessageResponse> sendMessage(@Valid @RequestBody com.keycap.keycapdesign.dto.chat.MessageRequest request) {
+        return ApiResponse.success(conversationService.sendMessage(request));
+    }
 }

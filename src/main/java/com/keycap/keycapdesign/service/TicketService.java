@@ -76,10 +76,12 @@ public class TicketService {
     private TicketResponse toResponse(Ticket ticket) {
         String designName = ticket.getRequest() != null ? ticket.getRequest().getDesignName() : null;
         String refImages = ticket.getRequest() != null ? ticket.getRequest().getReferenceImagesJson() : null;
+        Long customerId = ticket.getRequest() != null && ticket.getRequest().getUser() != null
+                ? ticket.getRequest().getUser().getId() : null;
         return new TicketResponse(ticket.getId(), ticket.getTicketCode(), ticket.getRequest().getId(),
                 ticket.getAssignedStaff() == null ? null : ticket.getAssignedStaff().getId(),
                 ticket.getAdmin() == null ? null : ticket.getAdmin().getId(), ticket.getDeadline(),
                 ticket.getRevisionCount(), ticket.getMaxRevisions(), ticket.getStatus(), ticket.getCreatedAt(),
-                designName, refImages);
+                designName, refImages, customerId);
     }
 }
