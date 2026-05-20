@@ -60,9 +60,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String token = jwtService.generateToken(user);
         AuthResponse authResponse = new AuthResponse(user.getId(), user.getEmail(), user.getRole(), token);
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        objectMapper.writeValue(response.getWriter(), authResponse);
+        String frontendUrl = "http://localhost:5173/login";
+        String redirectUrl = frontendUrl + "?token=" + token + "&userId=" + user.getId() + "&role=" + user.getRole().name();
+        
+        response.sendRedirect(redirectUrl);
     }
 }
 
