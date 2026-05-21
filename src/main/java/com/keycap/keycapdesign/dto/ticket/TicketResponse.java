@@ -16,10 +16,12 @@ public class TicketResponse {
     private Integer maxRevisions;
     private TicketStatus status;
     private LocalDateTime createdAt;
+    private String requestDesignName;
+    private String referenceImagesJson;
 
     public TicketResponse(Long id, String ticketCode, Long requestId, Long assignedStaffId, Long adminId,
                           LocalDate deadline, Integer revisionCount, Integer maxRevisions, TicketStatus status,
-                          LocalDateTime createdAt) {
+                          LocalDateTime createdAt, String requestDesignName, String referenceImagesJson) {
         this.id = id;
         this.ticketCode = ticketCode;
         this.requestId = requestId;
@@ -30,46 +32,20 @@ public class TicketResponse {
         this.maxRevisions = maxRevisions;
         this.status = status;
         this.createdAt = createdAt;
+        this.requestDesignName = requestDesignName;
+        this.referenceImagesJson = referenceImagesJson;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getTicketCode() {
-        return ticketCode;
-    }
-
-    public Long getRequestId() {
-        return requestId;
-    }
-
-    public Long getAssignedStaffId() {
-        return assignedStaffId;
-    }
-
-    public Long getAdminId() {
-        return adminId;
-    }
-
-    public LocalDate getDeadline() {
-        return deadline;
-    }
-
-    public Integer getRevisionCount() {
-        return revisionCount;
-    }
-
-    public Integer getMaxRevisions() {
-        return maxRevisions;
-    }
-
-    public TicketStatus getStatus() {
-        return status;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public Long getId() { return id; }
+    public String getTicketCode() { return ticketCode; }
+    public Long getRequestId() { return requestId; }
+    public Long getAssignedStaffId() { return assignedStaffId; }
+    public Long getAdminId() { return adminId; }
+    public LocalDate getDeadline() { return deadline; }
+    public Integer getRevisionCount() { return revisionCount; }
+    public Integer getMaxRevisions() { return maxRevisions; }
+    public TicketStatus getStatus() { return status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getRequestDesignName() { return requestDesignName; }
+    public String getReferenceImagesJson() { return referenceImagesJson; }
 }
-
