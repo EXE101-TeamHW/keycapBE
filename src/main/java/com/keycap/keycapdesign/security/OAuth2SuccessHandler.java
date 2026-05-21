@@ -1,7 +1,5 @@
 package com.keycap.keycapdesign.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.keycap.keycapdesign.dto.auth.AuthResponse;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.AuthProvider;
 import com.keycap.keycapdesign.enums.Role;
@@ -17,14 +15,17 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
+    private static final String FRONTEND_LOGIN_URL = "http://localhost:5173/login";
+
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OAuth2SuccessHandler(UserRepository userRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -58,12 +59,16 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);
-        AuthResponse authResponse = new AuthResponse(user.getId(), user.getEmail(), user.getRole(), token);
+        String redirectUrl = FRONTEND_LOGIN_URL
+                + "?token=" + encode(token)
+                + "&userId=" + encode(user.getId())
+                + "&role=" + encode(user.getRole().name());
 
-        String frontendUrl = "http://localhost:5173/login";
-        String redirectUrl = frontendUrl + "?token=" + token + "&userId=" + user.getId() + "&role=" + user.getRole().name();
-        
         response.sendRedirect(redirectUrl);
+    }
+
+    private String encode(Object value) {
+        return URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8);
     }
 }
 
