@@ -2,20 +2,20 @@ package com.keycap.keycapdesign.dto.payment;
 
 import com.keycap.keycapdesign.enums.PaymentStatus;
 
-public class VnPayReturnResponse {
+public class PayOsReturnResponse {
     private Long orderId;
     private String orderCode;
-    private String responseCode;
-    private String transactionNo;
+    private String payOsPaymentLinkId;
+    private String payOsStatus;
     private boolean success;
     private PaymentStatus paymentStatus;
 
-    public VnPayReturnResponse(Long orderId, String orderCode, String responseCode, String transactionNo,
+    public PayOsReturnResponse(Long orderId, String orderCode, String payOsPaymentLinkId, String payOsStatus,
                                boolean success, PaymentStatus paymentStatus) {
         this.orderId = orderId;
         this.orderCode = orderCode;
-        this.responseCode = responseCode;
-        this.transactionNo = transactionNo;
+        this.payOsPaymentLinkId = payOsPaymentLinkId;
+        this.payOsStatus = payOsStatus;
         this.success = success;
         this.paymentStatus = paymentStatus;
     }
@@ -28,12 +28,12 @@ public class VnPayReturnResponse {
         return orderCode;
     }
 
-    public String getResponseCode() {
-        return responseCode;
+    public String getPayOsPaymentLinkId() {
+        return payOsPaymentLinkId;
     }
 
-    public String getTransactionNo() {
-        return transactionNo;
+    public String getPayOsStatus() {
+        return payOsStatus;
     }
 
     public boolean isSuccess() {

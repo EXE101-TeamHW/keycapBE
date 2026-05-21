@@ -3,7 +3,7 @@ package com.keycap.keycapdesign.enums;
 public enum PaymentMethod {
     COD,
     BANK_TRANSFER,
-    VNPAY,
+    PAYOS,
     MOMO
 }
 
