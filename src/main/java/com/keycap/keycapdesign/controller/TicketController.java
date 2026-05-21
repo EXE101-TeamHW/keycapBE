@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -36,7 +37,10 @@ public class TicketController {
     }
 
     @GetMapping
-    public ApiResponse<List<TicketResponse>> list() {
+    public ApiResponse<List<TicketResponse>> list(@RequestParam(required = false) Long userId) {
+        if (userId != null) {
+            return ApiResponse.success(ticketService.listByUser(userId));
+        }
         return ApiResponse.success(ticketService.listTickets());
     }
 
