@@ -4,6 +4,7 @@ import com.keycap.keycapdesign.enums.OrderType;
 import com.keycap.keycapdesign.enums.PaymentMethod;
 import com.keycap.keycapdesign.enums.PaymentType;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 
 import java.util.List;
 
@@ -23,6 +24,10 @@ public class OrderCreateRequest {
 
     @NotNull
     private List<OrderItemRequest> items;
+
+    private BigDecimal totalAmount;
+
+    private BigDecimal shippingFee;
 
     public Long getUserId() {
         return userId;
@@ -78,6 +83,22 @@ public class OrderCreateRequest {
 
     public void setItems(List<OrderItemRequest> items) {
         this.items = items;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public BigDecimal getShippingFee() {
+        return shippingFee;
+    }
+
+    public void setShippingFee(BigDecimal shippingFee) {
+        this.shippingFee = shippingFee;
     }
 }
 

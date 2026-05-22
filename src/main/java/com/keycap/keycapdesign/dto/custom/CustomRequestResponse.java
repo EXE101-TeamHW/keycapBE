@@ -9,6 +9,7 @@ import java.util.List;
 
 public class CustomRequestResponse {
     private Long id;
+    private Long ticketId;
     private Long userId;
     private String designName;
     private LayoutType layout;
@@ -18,9 +19,10 @@ public class CustomRequestResponse {
     private TicketStatus status;
     private LocalDateTime createdAt;
 
-    public CustomRequestResponse(Long id, Long userId, String designName, LayoutType layout, ProductTheme theme,
+    public CustomRequestResponse(Long id, Long ticketId, Long userId, String designName, LayoutType layout, ProductTheme theme,
                                  List<String> referenceImages, String notes, TicketStatus status, LocalDateTime createdAt) {
         this.id = id;
+        this.ticketId = ticketId;
         this.userId = userId;
         this.designName = designName;
         this.layout = layout;
@@ -33,6 +35,10 @@ public class CustomRequestResponse {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getTicketId() {
+        return ticketId;
     }
 
     public Long getUserId() {
