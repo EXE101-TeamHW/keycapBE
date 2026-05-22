@@ -46,9 +46,11 @@ public class PayOsService {
     private String cancelUrl;
 
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
-    public PayOsService(OrderRepository orderRepository) {
+    public PayOsService(OrderRepository orderRepository, OrderService orderService) {
         this.orderRepository = orderRepository;
+        this.orderService = orderService;
     }
 
     @Transactional
@@ -86,6 +88,13 @@ public class PayOsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String status = queryParams.get("status");
         boolean success = PAID_STATUS.equalsIgnoreCase(status);
+        
+        if (!success && "CANCELLED".equalsIgnoreCase(status) && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
+            order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
+            orderService.restoreStock(order);
+            orderRepository.save(order);
+        }
+        
         return new PayOsReturnResponse(order.getId(),
                 order.getOrderCode(),
                 queryParams.get("id"),
@@ -117,6 +126,10 @@ public class PayOsService {
             if (success) {
                 order.setPaymentMethod(PaymentMethod.PAYOS);
                 order.setPaymentStatus(PaymentStatus.PAID);
+                orderRepository.save(order);
+            } else if (order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
+                order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
+                orderService.restoreStock(order);
                 orderRepository.save(order);
             }
 

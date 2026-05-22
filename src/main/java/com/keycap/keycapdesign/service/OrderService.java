@@ -66,25 +66,43 @@ public class OrderService {
         orderRepository.save(order);
 
         BigDecimal total = BigDecimal.ZERO;
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-            if (product.getStockQuantity() != null && product.getStockQuantity() < itemRequest.getQuantity()) {
-                throw new BadRequestException("Insufficient stock for product " + product.getName());
+        
+        if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM) {
+            if (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(1000000)) < 0) {
+                throw new BadRequestException("Custom order minimum deposit amount is 1,000,000 VND");
             }
-            OrderItem item = new OrderItem();
-            item.setOrder(order);
-            item.setProduct(product);
-            item.setQuantity(itemRequest.getQuantity());
-            item.setUnitPrice(product.getPrice());
-            item.setSubtotal(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
-            orderItemRepository.save(item);
-            total = total.add(item.getSubtotal());
-            if (product.getStockQuantity() != null) {
-                product.setStockQuantity(product.getStockQuantity() - itemRequest.getQuantity());
-                productRepository.save(product);
+            total = request.getTotalAmount();
+        } else {
+            for (OrderItemRequest itemRequest : request.getItems()) {
+                Product product = productRepository.findById(itemRequest.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+                if (product.getStockQuantity() != null && product.getStockQuantity() < itemRequest.getQuantity()) {
+                    throw new BadRequestException("Insufficient stock for product " + product.getName());
+                }
+                OrderItem item = new OrderItem();
+                item.setOrder(order);
+                item.setProduct(product);
+                item.setQuantity(itemRequest.getQuantity());
+                item.setUnitPrice(product.getPrice());
+                item.setSubtotal(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+                orderItemRepository.save(item);
+                total = total.add(item.getSubtotal());
+                if (product.getStockQuantity() != null) {
+                    product.setStockQuantity(product.getStockQuantity() - itemRequest.getQuantity());
+                    productRepository.save(product);
+                }
+            }
+            
+            // Add tax (8%)
+            BigDecimal tax = total.multiply(BigDecimal.valueOf(0.08));
+            total = total.add(tax);
+            
+            // Add shipping fee
+            if (request.getShippingFee() != null) {
+                total = total.add(request.getShippingFee());
             }
         }
+        
         order.setTotalAmount(total);
         orderRepository.save(order);
         return toResponse(order);
@@ -122,9 +140,25 @@ public class OrderService {
     public OrderResponse cancelOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        order.setStatus(OrderStatus.CANCELLED);
-        orderRepository.save(order);
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            order.setStatus(OrderStatus.CANCELLED);
+            restoreStock(order);
+            orderRepository.save(order);
+        }
         return toResponse(order);
+    }
+
+    public void restoreStock(Order order) {
+        if (order.getType() == com.keycap.keycapdesign.enums.OrderType.SHOP) {
+            List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+            for (OrderItem item : items) {
+                Product product = item.getProduct();
+                if (product != null && product.getStockQuantity() != null) {
+                    product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                    productRepository.save(product);
+                }
+            }
+        }
     }
 
     private OrderResponse toResponse(Order order) {

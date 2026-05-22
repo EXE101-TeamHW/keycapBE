@@ -52,23 +52,27 @@ public class CustomRequestService {
         ticket.setStatus(TicketStatus.PENDING);
         ticketRepository.save(ticket);
 
-        return toResponse(customRequest);
+        return toResponse(customRequest, ticket.getId());
     }
 
     public List<CustomRequestResponse> listByUser(Long userId) {
         return customRequestRepository.findByUserId(userId).stream()
-                .map(this::toResponse)
+                .map(req -> {
+                    Ticket ticket = ticketRepository.findByRequestId(req.getId()).orElse(null);
+                    return toResponse(req, ticket != null ? ticket.getId() : null);
+                })
                 .collect(Collectors.toList());
     }
 
     public CustomRequestResponse getById(Long id) {
         CustomRequest customRequest = customRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Custom request not found"));
-        return toResponse(customRequest);
+        Ticket ticket = ticketRepository.findByRequestId(customRequest.getId()).orElse(null);
+        return toResponse(customRequest, ticket != null ? ticket.getId() : null);
     }
 
-    private CustomRequestResponse toResponse(CustomRequest customRequest) {
-        return new CustomRequestResponse(customRequest.getId(), customRequest.getUser().getId(),
+    private CustomRequestResponse toResponse(CustomRequest customRequest, Long ticketId) {
+        return new CustomRequestResponse(customRequest.getId(), ticketId, customRequest.getUser().getId(),
                 customRequest.getDesignName(), customRequest.getLayout(), customRequest.getTheme(),
                 JsonUtil.fromJson(customRequest.getReferenceImagesJson()), customRequest.getNotes(),
                 customRequest.getStatus(), customRequest.getCreatedAt());
