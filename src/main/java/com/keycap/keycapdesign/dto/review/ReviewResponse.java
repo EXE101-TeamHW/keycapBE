@@ -7,16 +7,18 @@ public class ReviewResponse {
     private Long orderId;
     private Long productId;
     private Long userId;
+    private String userName;
     private Integer rating;
     private String comment;
     private LocalDateTime createdAt;
 
-    public ReviewResponse(Long id, Long orderId, Long productId, Long userId, Integer rating, String comment,
+    public ReviewResponse(Long id, Long orderId, Long productId, Long userId, String userName, Integer rating, String comment,
                           LocalDateTime createdAt) {
         this.id = id;
         this.orderId = orderId;
         this.productId = productId;
         this.userId = userId;
+        this.userName = userName;
         this.rating = rating;
         this.comment = comment;
         this.createdAt = createdAt;
@@ -36,6 +38,10 @@ public class ReviewResponse {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getUserName() {
+        return userName;
     }
 
     public Integer getRating() {
