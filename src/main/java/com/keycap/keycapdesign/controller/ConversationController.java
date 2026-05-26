@@ -6,15 +6,16 @@ import com.keycap.keycapdesign.dto.chat.ConversationCreateRequest;
 import com.keycap.keycapdesign.dto.chat.ConversationResponse;
 import com.keycap.keycapdesign.dto.chat.MarkReadRequest;
 import com.keycap.keycapdesign.dto.chat.MessageResponse;
+import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.ConversationService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,41 +24,50 @@ import java.util.List;
 @RequestMapping("/api/conversations")
 public class ConversationController {
     private final ConversationService conversationService;
+    private final CurrentUserService currentUserService;
 
-    public ConversationController(ConversationService conversationService) {
+    public ConversationController(ConversationService conversationService, CurrentUserService currentUserService) {
         this.conversationService = conversationService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<ConversationResponse> create(@Valid @RequestBody ConversationCreateRequest request) {
+        request.setCustomerId(currentUserService.getCurrentUserId());
         return ApiResponse.success(conversationService.createConversation(request));
     }
 
     @GetMapping
-    public ApiResponse<List<ConversationResponse>> list(@RequestParam Long userId) {
-        return ApiResponse.success(conversationService.listConversations(userId));
+    public ApiResponse<List<ConversationResponse>> list() {
+        return ApiResponse.success(conversationService.listConversations(currentUserService.getCurrentUserId()));
     }
 
     @GetMapping("/{conversationId}/messages")
-    public ApiResponse<List<MessageResponse>> messages(@PathVariable Long conversationId,
-                                                       @RequestParam Long userId) {
-        return ApiResponse.success(conversationService.getMessages(conversationId, userId));
+    public ApiResponse<List<MessageResponse>> messages(@PathVariable Long conversationId) {
+        return ApiResponse.success(conversationService.getMessages(conversationId,
+                currentUserService.getCurrentUserId()));
     }
 
     @PutMapping("/{conversationId}/read")
     public ApiResponse<ConversationResponse> markRead(@PathVariable Long conversationId,
-                                                      @Valid @RequestBody MarkReadRequest request) {
+            @Valid @RequestBody MarkReadRequest request) {
+        request.setUserId(currentUserService.getCurrentUserId());
         return ApiResponse.success(conversationService.markAsRead(conversationId, request));
     }
 
     @PutMapping("/{conversationId}/close")
+    @PreAuthorize("hasRole('STAFF')")
     public ApiResponse<ConversationResponse> close(@PathVariable Long conversationId,
-                                                   @Valid @RequestBody CloseConversationRequest request) {
+            @Valid @RequestBody CloseConversationRequest request) {
+        request.setStaffId(currentUserService.getCurrentUserId());
         return ApiResponse.success(conversationService.closeConversation(conversationId, request));
     }
 
     @PostMapping("/messages")
-    public ApiResponse<MessageResponse> sendMessage(@Valid @RequestBody com.keycap.keycapdesign.dto.chat.MessageRequest request) {
+    public ApiResponse<MessageResponse> sendMessage(
+            @Valid @RequestBody com.keycap.keycapdesign.dto.chat.MessageRequest request) {
+        request.setSenderId(currentUserService.getCurrentUserId());
         return ApiResponse.success(conversationService.sendMessage(request));
     }
 }

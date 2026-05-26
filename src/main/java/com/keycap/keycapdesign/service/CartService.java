@@ -10,6 +10,7 @@ import com.keycap.keycapdesign.repository.CartItemRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import vn.payos.exception.UnauthorizedException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,7 +22,7 @@ public class CartService {
     private final ProductRepository productRepository;
 
     public CartService(CartItemRepository cartItemRepository, UserRepository userRepository,
-                       ProductRepository productRepository) {
+            ProductRepository productRepository) {
         this.cartItemRepository = cartItemRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
@@ -47,8 +48,13 @@ public class CartService {
                 .collect(Collectors.toList());
     }
 
-    public void removeItem(Long id) {
-        cartItemRepository.deleteById(id);
+    public void removeItem(Long id, Long userId) {
+        CartItem item = cartItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+        if (item.getUser() == null || !item.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("Access denied");
+        }
+        cartItemRepository.delete(item);
     }
 
     private CartItemResponse toResponse(CartItem item) {
@@ -56,4 +62,3 @@ public class CartService {
                 item.getQuantity(), item.getProduct().getPrice());
     }
 }
-

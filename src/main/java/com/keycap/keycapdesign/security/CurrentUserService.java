@@ -1,8 +1,6 @@
 package com.keycap.keycapdesign.security;
 
-import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.entity.User;
-
 import vn.payos.exception.UnauthorizedException;
 
 import org.springframework.security.core.Authentication;
@@ -23,8 +21,12 @@ public class CurrentUserService {
         }
 
         Object principal = authentication.getPrincipal();
-        if (principal instanceof User user)
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getUser();
+        }
+        if (principal instanceof User user) {
             return user;
+        }
 
         throw new UnauthorizedException("Authentication required");
     }

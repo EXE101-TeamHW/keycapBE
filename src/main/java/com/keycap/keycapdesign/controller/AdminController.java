@@ -12,6 +12,7 @@ import com.keycap.keycapdesign.service.OrderService;
 import com.keycap.keycapdesign.service.ProductService;
 import com.keycap.keycapdesign.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +25,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
     private final UserService userService;
     private final ProductService productService;
@@ -42,13 +44,13 @@ public class AdminController {
 
     @PutMapping("/users/{id}/status")
     public ApiResponse<UserResponse> updateUserStatus(@PathVariable Long id,
-                                                      @Valid @RequestBody UserStatusUpdateRequest request) {
+            @Valid @RequestBody UserStatusUpdateRequest request) {
         return ApiResponse.success(userService.updateStatus(id, request));
     }
 
     @PutMapping("/users/{id}/role")
     public ApiResponse<UserResponse> updateUserRole(@PathVariable Long id,
-                                                    @Valid @RequestBody UserRoleUpdateRequest request) {
+            @Valid @RequestBody UserRoleUpdateRequest request) {
         return ApiResponse.success(userService.updateRole(id, request));
     }
 
@@ -59,7 +61,7 @@ public class AdminController {
 
     @PutMapping("/products/{id}")
     public ApiResponse<ProductResponse> updateProduct(@PathVariable Long id,
-                                                      @Valid @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductRequest request) {
         return ApiResponse.success(productService.updateProduct(id, request));
     }
 
@@ -70,7 +72,7 @@ public class AdminController {
 
     @PutMapping("/orders/{id}/status")
     public ApiResponse<OrderResponse> updateOrderStatus(@PathVariable Long id,
-                                                        @Valid @RequestBody OrderStatusUpdateRequest request) {
+            @Valid @RequestBody OrderStatusUpdateRequest request) {
         return ApiResponse.success(orderService.updateStatus(id, request));
     }
 
