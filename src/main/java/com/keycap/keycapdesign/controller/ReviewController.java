@@ -3,8 +3,10 @@ package com.keycap.keycapdesign.controller;
 import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.review.ReviewRequest;
 import com.keycap.keycapdesign.dto.review.ReviewResponse;
+import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.ReviewService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +22,11 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final CurrentUserService currentUserService;
 
-    public ReviewController(ReviewService reviewService) {
+    public ReviewController(ReviewService reviewService, CurrentUserService currentUserService) {
         this.reviewService = reviewService;
+        this.currentUserService = currentUserService;
     }
 
     /**
@@ -30,10 +34,12 @@ public class ReviewController {
      * Body: { userId, rating (1-5), comment }
      */
     @PostMapping
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<ReviewResponse> create(
             @PathVariable Long productId,
             @RequestParam(required = false) Long orderId,
             @Valid @RequestBody ReviewRequest request) {
+        request.setUserId(currentUserService.getCurrentUserId());
         return ApiResponse.success(reviewService.createReview(productId, orderId, request));
     }
 

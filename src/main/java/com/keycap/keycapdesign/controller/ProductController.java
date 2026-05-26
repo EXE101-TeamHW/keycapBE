@@ -4,12 +4,14 @@ import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.product.ProductResponse;
 import com.keycap.keycapdesign.dto.review.ReviewRequest;
 import com.keycap.keycapdesign.dto.review.ReviewResponse;
+import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.ProductService;
 import com.keycap.keycapdesign.service.ReviewService;
 import com.keycap.keycapdesign.enums.KeyProfile;
 import com.keycap.keycapdesign.enums.LayoutType;
 import com.keycap.keycapdesign.enums.ProductTheme;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,18 +28,21 @@ import java.util.List;
 public class ProductController {
     private final ProductService productService;
     private final ReviewService reviewService;
+    private final CurrentUserService currentUserService;
 
-    public ProductController(ProductService productService, ReviewService reviewService) {
+    public ProductController(ProductService productService, ReviewService reviewService,
+            CurrentUserService currentUserService) {
         this.productService = productService;
         this.reviewService = reviewService;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
     public ApiResponse<List<ProductResponse>> list(@RequestParam(required = false) ProductTheme theme,
-                                                   @RequestParam(required = false) LayoutType layoutType,
-                                                   @RequestParam(required = false) KeyProfile keyProfile,
-                                                   @RequestParam(required = false) BigDecimal minPrice,
-                                                   @RequestParam(required = false) BigDecimal maxPrice) {
+            @RequestParam(required = false) LayoutType layoutType,
+            @RequestParam(required = false) KeyProfile keyProfile,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice) {
         return ApiResponse.success(productService.listProducts(theme, layoutType, keyProfile, minPrice, maxPrice));
     }
 
@@ -47,9 +52,11 @@ public class ProductController {
     }
 
     @PostMapping("/{id}/reviews")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<ReviewResponse> createReview(@PathVariable Long id,
-                                                    @RequestParam(required = false) Long orderId,
-                                                    @Valid @RequestBody ReviewRequest request) {
+            @RequestParam(required = false) Long orderId,
+            @Valid @RequestBody ReviewRequest request) {
+        request.setUserId(currentUserService.getCurrentUserId());
         return ApiResponse.success(reviewService.createReview(id, orderId, request));
     }
 

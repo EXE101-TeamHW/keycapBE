@@ -8,16 +8,15 @@ import com.keycap.keycapdesign.dto.auth.ResendVerificationRequest;
 import com.keycap.keycapdesign.dto.auth.VerifyEmailRequest;
 import com.keycap.keycapdesign.dto.user.UserProfileUpdateRequest;
 import com.keycap.keycapdesign.dto.user.UserResponse;
+import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.AuthService;
 import com.keycap.keycapdesign.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,10 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
     private final UserService userService;
+    private final CurrentUserService currentUserService;
 
-    public AuthController(AuthService authService, UserService userService) {
+    public AuthController(AuthService authService, UserService userService, CurrentUserService currentUserService) {
         this.authService = authService;
         this.userService = userService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping("/register")
@@ -42,7 +43,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(@RequestParam Long userId) {
+    public ApiResponse<UserResponse> me() {
+        long userId = currentUserService.getCurrentUserId();
         return ApiResponse.success(authService.me(userId));
     }
 
@@ -60,9 +62,10 @@ public class AuthController {
     /**
      * PUT /api/auth/profile/{userId} - Customer cập nhật thông tin cá nhân
      */
-    @PutMapping("/profile/{userId}")
-    public ApiResponse<UserResponse> updateProfile(@PathVariable Long userId,
+    @PutMapping("/profile")
+    public ApiResponse<UserResponse> updateProfile(
             @RequestBody UserProfileUpdateRequest request) {
+        long userId = currentUserService.getCurrentUserId();
         return ApiResponse.success(userService.updateProfile(userId, request));
     }
 }
