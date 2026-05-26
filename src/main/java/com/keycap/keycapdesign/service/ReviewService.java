@@ -40,7 +40,20 @@ public class ReviewService {
         if (orderId != null) {
             order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+            
+            if (!order.getUser().getId().equals(user.getId())) {
+                throw new IllegalArgumentException("You can only review products from your own orders");
+            }
+            if (!com.keycap.keycapdesign.enums.OrderStatus.DELIVERED.equals(order.getStatus())) {
+                throw new IllegalArgumentException("You can only review products from delivered orders");
+            }
+            boolean containsProduct = order.getItems().stream()
+                    .anyMatch(item -> item.getProduct() != null && item.getProduct().getId().equals(productId));
+            if (!containsProduct) {
+                throw new IllegalArgumentException("This order does not contain the specified product");
+            }
         }
+        
         Review review = new Review();
         review.setProduct(product);
         review.setUser(user);
@@ -57,11 +70,21 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    public List<ReviewResponse> listAll() {
+        return reviewRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     private ReviewResponse toResponse(Review review) {
+        String userName = review.getUser() != null ? 
+            (review.getUser().getFullName() != null ? review.getUser().getFullName() : review.getUser().getEmail()) : "Unknown User";
+
         return new ReviewResponse(review.getId(),
                 review.getOrder() == null ? null : review.getOrder().getId(),
                 review.getProduct() == null ? null : review.getProduct().getId(),
                 review.getUser() == null ? null : review.getUser().getId(),
+                userName,
                 review.getRating(), review.getComment(), review.getCreatedAt());
     }
 }
