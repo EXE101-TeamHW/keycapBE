@@ -61,4 +61,9 @@ public class CartService {
         return new CartItemResponse(item.getId(), item.getProduct().getId(), item.getProduct().getName(),
                 item.getQuantity(), item.getProduct().getPrice());
     }
+
+    public void clearCart(Long userId) {
+        List<CartItem> items = cartItemRepository.findByUserId(userId);
+        cartItemRepository.deleteAll(items);
+    }
 }

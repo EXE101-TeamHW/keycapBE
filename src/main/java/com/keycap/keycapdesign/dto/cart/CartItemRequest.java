@@ -3,7 +3,6 @@ package com.keycap.keycapdesign.dto.cart;
 import jakarta.validation.constraints.NotNull;
 
 public class CartItemRequest {
-    @NotNull
     private Long userId;
 
     @NotNull

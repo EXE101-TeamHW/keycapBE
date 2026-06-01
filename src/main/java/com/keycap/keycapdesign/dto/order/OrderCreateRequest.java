@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class OrderCreateRequest {
-    @NotNull
     private Long userId;
 
     private OrderType type = OrderType.SHOP;

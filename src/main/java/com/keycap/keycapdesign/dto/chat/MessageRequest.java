@@ -8,7 +8,6 @@ public class MessageRequest {
     @NotNull
     private Long conversationId;
 
-    @NotNull
     private Long senderId;
 
     @NotBlank

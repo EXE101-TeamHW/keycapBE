@@ -73,7 +73,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), user.getAvatarUrl(),
-                user.getRole(), user.getStatus(), user.getCreatedAt());
+                user.getBankAccount(), user.getRole(), user.getStatus(), user.getCreatedAt());
     }
 
     public AuthResponse verifyEmail(VerifyEmailRequest request) {

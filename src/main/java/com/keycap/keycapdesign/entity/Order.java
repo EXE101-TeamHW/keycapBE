@@ -42,6 +42,10 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "ticket_id")
     private Ticket ticket;
 
+    @ManyToOne
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff;
+
     @Column(name = "total_amount", precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
