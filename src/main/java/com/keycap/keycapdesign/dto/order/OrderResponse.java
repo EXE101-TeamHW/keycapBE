@@ -14,6 +14,12 @@ public class OrderResponse {
     private Long id;
     private String orderCode;
     private Long userId;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
+    private String customerBankAccount;
+    private Long staffId;
+    private String staffName;
     private OrderType type;
     private Long ticketId;
     private BigDecimal totalAmount;
@@ -26,13 +32,20 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
 
-    public OrderResponse(Long id, String orderCode, Long userId, OrderType type, Long ticketId, BigDecimal totalAmount,
+    public OrderResponse(Long id, String orderCode, Long userId, String customerName, String customerEmail, String customerPhone, String customerBankAccount, 
+                         Long staffId, String staffName, OrderType type, Long ticketId, BigDecimal totalAmount,
                          PaymentMethod paymentMethod, PaymentStatus paymentStatus, PaymentType paymentType,
                          String shippingAddress, String trackingNumber, OrderStatus status, LocalDateTime createdAt,
                          List<OrderItemResponse> items) {
         this.id = id;
         this.orderCode = orderCode;
         this.userId = userId;
+        this.customerName = customerName;
+        this.customerEmail = customerEmail;
+        this.customerPhone = customerPhone;
+        this.customerBankAccount = customerBankAccount;
+        this.staffId = staffId;
+        this.staffName = staffName;
         this.type = type;
         this.ticketId = ticketId;
         this.totalAmount = totalAmount;
@@ -56,6 +69,30 @@ public class OrderResponse {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public String getCustomerBankAccount() {
+        return customerBankAccount;
+    }
+
+    public Long getStaffId() {
+        return staffId;
+    }
+
+    public String getStaffName() {
+        return staffName;
     }
 
     public OrderType getType() {

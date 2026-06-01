@@ -78,10 +78,18 @@ public class TicketService {
         String refImages = ticket.getRequest() != null ? ticket.getRequest().getReferenceImagesJson() : null;
         Long customerId = ticket.getRequest() != null && ticket.getRequest().getUser() != null
                 ? ticket.getRequest().getUser().getId() : null;
+        String customerName = ticket.getRequest() != null && ticket.getRequest().getUser() != null
+                ? ticket.getRequest().getUser().getFullName() : null;
+        String customerEmail = ticket.getRequest() != null && ticket.getRequest().getUser() != null
+                ? ticket.getRequest().getUser().getEmail() : null;
+        String customerPhone = ticket.getRequest() != null && ticket.getRequest().getUser() != null
+                ? ticket.getRequest().getUser().getPhone() : null;
+        String assignedStaffName = ticket.getAssignedStaff() != null ? ticket.getAssignedStaff().getFullName() : null;
+                
         return new TicketResponse(ticket.getId(), ticket.getTicketCode(), ticket.getRequest().getId(),
                 ticket.getAssignedStaff() == null ? null : ticket.getAssignedStaff().getId(),
                 ticket.getAdmin() == null ? null : ticket.getAdmin().getId(), ticket.getDeadline(),
                 ticket.getRevisionCount(), ticket.getMaxRevisions(), ticket.getStatus(), ticket.getCreatedAt(),
-                designName, refImages, customerId);
+                designName, refImages, customerId, customerName, customerEmail, customerPhone, assignedStaffName);
     }
 }

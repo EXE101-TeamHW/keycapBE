@@ -45,7 +45,7 @@ public class OrderService {
         this.ticketRepository = ticketRepository;
     }
 
-    public OrderResponse createOrder(OrderCreateRequest request) {
+    public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Ticket ticket = null;
@@ -101,6 +101,13 @@ public class OrderService {
             if (request.getShippingFee() != null) {
                 total = total.add(request.getShippingFee());
             }
+            
+            // Clear cart items for this user
+            try {
+                cartService.clearCart(user.getId());
+            } catch (Exception e) {
+                // Ignore if cart clearing fails
+            }
         }
         
         order.setTotalAmount(total);
@@ -116,6 +123,13 @@ public class OrderService {
 
     public List<OrderResponse> listAllOrders() {
         return orderRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrderResponse> listOrdersForStaff(Long staffId) {
+        return orderRepository.findAll().stream()
+                .filter(o -> o.getAssignedStaff() != null && o.getAssignedStaff().getId().equals(staffId))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -137,12 +151,32 @@ public class OrderService {
         return toResponse(order);
     }
 
+    public OrderResponse assignStaff(Long id, Long staffId) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        User staff = userRepository.findById(staffId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+        order.setAssignedStaff(staff);
+        orderRepository.save(order);
+        return toResponse(order);
+    }
+
     public OrderResponse cancelOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.CANCELLED);
             restoreStock(order);
+            orderRepository.save(order);
+        }
+        return toResponse(order);
+    }
+
+    public OrderResponse refundOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (order.getStatus() == OrderStatus.CANCELLED && order.getPaymentStatus() == com.keycap.keycapdesign.enums.PaymentStatus.PAID) {
+            order.setPaymentStatus(com.keycap.keycapdesign.enums.PaymentStatus.REFUNDED);
             orderRepository.save(order);
         }
         return toResponse(order);
@@ -168,7 +202,17 @@ public class OrderService {
                         item.getProduct() == null ? null : item.getProduct().getName(),
                         item.getQuantity(), item.getUnitPrice(), item.getSubtotal()))
                 .collect(Collectors.toList());
-        return new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(), order.getType(),
+                
+        String customerName = order.getUser().getFullName() != null ? order.getUser().getFullName() : "Customer";
+        String customerEmail = order.getUser().getEmail();
+        String customerPhone = order.getUser().getPhone();
+        String bankAccount = order.getUser().getBankAccount();
+        Long staffId = order.getAssignedStaff() != null ? order.getAssignedStaff().getId() : null;
+        String staffName = order.getAssignedStaff() != null ? order.getAssignedStaff().getFullName() : null;
+
+        return new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(), 
+                customerName, customerEmail, customerPhone, bankAccount, staffId, staffName,
+                order.getType(),
                 order.getTicket() == null ? null : order.getTicket().getId(), order.getTotalAmount(),
                 order.getPaymentMethod(), order.getPaymentStatus(), order.getPaymentType(), order.getShippingAddress(),
                 order.getTrackingNumber(), order.getStatus(), order.getCreatedAt(), items);

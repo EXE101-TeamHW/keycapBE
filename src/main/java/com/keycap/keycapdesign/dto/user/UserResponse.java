@@ -11,16 +11,18 @@ public class UserResponse {
     private String fullName;
     private String phone;
     private String avatarUrl;
+    private String bankAccount;
     private Role role;
     private UserStatus status;
     private LocalDateTime createdAt;
 
-    public UserResponse(Long id, String email, String fullName, String phone, String avatarUrl, Role role, UserStatus status, LocalDateTime createdAt) {
+    public UserResponse(Long id, String email, String fullName, String phone, String avatarUrl, String bankAccount, Role role, UserStatus status, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
         this.fullName = fullName;
         this.phone = phone;
         this.avatarUrl = avatarUrl;
+        this.bankAccount = bankAccount;
         this.role = role;
         this.status = status;
         this.createdAt = createdAt;
@@ -44,6 +46,10 @@ public class UserResponse {
 
     public String getAvatarUrl() {
         return avatarUrl;
+    }
+
+    public String getBankAccount() {
+        return bankAccount;
     }
 
     public Role getRole() {

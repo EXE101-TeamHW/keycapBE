@@ -9,7 +9,6 @@ import com.keycap.keycapdesign.enums.LayoutType;
 import com.keycap.keycapdesign.enums.ProductTheme;
 
 public class CustomRequestCreateRequest {
-    @NotNull
     private Long userId;
 
     @NotBlank

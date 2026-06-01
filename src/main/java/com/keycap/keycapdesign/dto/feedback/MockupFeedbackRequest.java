@@ -7,7 +7,6 @@ public class MockupFeedbackRequest {
     @NotNull
     private Long mockupId;
 
-    @NotNull
     private Long userId;
 
     private FeedbackType type = FeedbackType.COMMENT;
