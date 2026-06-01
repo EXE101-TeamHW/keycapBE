@@ -3,8 +3,12 @@ package com.keycap.keycapdesign.enums;
 public enum OrderStatus {
     PENDING,
     CONFIRMED,
-    SHIPPED,
+    PROCESSING,
+    SHIPPING,
+    SHIPPED, // keeping for backward compatibility if any
     DELIVERED,
-    CANCELLED
+    COMPLETED,
+    CANCELLED,
+    REFUNDED
 }
 
