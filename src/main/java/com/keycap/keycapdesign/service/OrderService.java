@@ -143,10 +143,61 @@ public class OrderService {
     public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        order.setStatus(request.getStatus());
+
+        // Validate state transition
+        OrderStatus currentStatus = order.getStatus();
+        OrderStatus newStatus = request.getStatus();
+
+        if (newStatus != OrderStatus.CANCELLED) {
+            boolean valid = false;
+            switch (currentStatus) {
+                case PENDING:
+                    if (newStatus == OrderStatus.CONFIRMED) valid = true;
+                    break;
+                case CONFIRMED:
+                    if (newStatus == OrderStatus.PROCESSING) valid = true;
+                    break;
+                case PROCESSING:
+                    if (newStatus == OrderStatus.SHIPPING) valid = true;
+                    break;
+                case SHIPPING:
+                    if (newStatus == OrderStatus.DELIVERED) valid = true;
+                    break;
+                case DELIVERED:
+                    if (newStatus == OrderStatus.COMPLETED) valid = true;
+                    break;
+                default:
+                    valid = false;
+            }
+            if (!valid && currentStatus != newStatus) {
+                throw new BadRequestException("Invalid status transition from " + currentStatus + " to " + newStatus);
+            }
+        }
+
+        order.setStatus(newStatus);
         if (request.getTrackingNumber() != null) {
             order.setTrackingNumber(request.getTrackingNumber());
         }
+
+        if (request.getProofImages() != null && !request.getProofImages().isEmpty()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                String imagesJson = mapper.writeValueAsString(request.getProofImages());
+                // Append or replace? Replace for now, or merge if multiple phases have images.
+                // It's safer to read existing and append, but for simplicity we will just append to a list.
+                if (order.getProofImagesJson() != null && !order.getProofImagesJson().isEmpty() && !order.getProofImagesJson().equals("[]")) {
+                    List<String> existing = mapper.readValue(order.getProofImagesJson(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+                    existing.addAll(request.getProofImages());
+                    order.setProofImagesJson(mapper.writeValueAsString(existing));
+                } else {
+                    order.setProofImagesJson(imagesJson);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to save proof images: " + e.getMessage(), e);
+            }
+        }
+
         orderRepository.save(order);
         return toResponse(order);
     }
@@ -215,7 +266,7 @@ public class OrderService {
                 order.getType(),
                 order.getTicket() == null ? null : order.getTicket().getId(), order.getTotalAmount(),
                 order.getPaymentMethod(), order.getPaymentStatus(), order.getPaymentType(), order.getShippingAddress(),
-                order.getTrackingNumber(), order.getStatus(), order.getCreatedAt(), items);
+                order.getTrackingNumber(), order.getProofImagesJson(), order.getStatus(), order.getCreatedAt(), items);
     }
 
     private String generateOrderCode() {

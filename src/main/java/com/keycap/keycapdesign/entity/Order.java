@@ -64,6 +64,9 @@ public class Order extends BaseEntity {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
+    @Column(name = "proof_images", columnDefinition = "nvarchar(max)")
+    private String proofImagesJson;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
 

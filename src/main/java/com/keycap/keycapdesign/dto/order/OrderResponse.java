@@ -28,6 +28,7 @@ public class OrderResponse {
     private PaymentType paymentType;
     private String shippingAddress;
     private String trackingNumber;
+    private String proofImagesJson;
     private OrderStatus status;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
@@ -35,7 +36,7 @@ public class OrderResponse {
     public OrderResponse(Long id, String orderCode, Long userId, String customerName, String customerEmail, String customerPhone, String customerBankAccount, 
                          Long staffId, String staffName, OrderType type, Long ticketId, BigDecimal totalAmount,
                          PaymentMethod paymentMethod, PaymentStatus paymentStatus, PaymentType paymentType,
-                         String shippingAddress, String trackingNumber, OrderStatus status, LocalDateTime createdAt,
+                         String shippingAddress, String trackingNumber, String proofImagesJson, OrderStatus status, LocalDateTime createdAt,
                          List<OrderItemResponse> items) {
         this.id = id;
         this.orderCode = orderCode;
@@ -54,6 +55,7 @@ public class OrderResponse {
         this.paymentType = paymentType;
         this.shippingAddress = shippingAddress;
         this.trackingNumber = trackingNumber;
+        this.proofImagesJson = proofImagesJson;
         this.status = status;
         this.createdAt = createdAt;
         this.items = items;
@@ -133,6 +135,10 @@ public class OrderResponse {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getProofImagesJson() {
+        return proofImagesJson;
     }
 
     public List<OrderItemResponse> getItems() {
