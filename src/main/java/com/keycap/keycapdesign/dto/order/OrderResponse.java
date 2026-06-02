@@ -32,12 +32,13 @@ public class OrderResponse {
     private OrderStatus status;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
+    private Long conversationId;
 
     public OrderResponse(Long id, String orderCode, Long userId, String customerName, String customerEmail, String customerPhone, String customerBankAccount, 
                          Long staffId, String staffName, OrderType type, Long ticketId, BigDecimal totalAmount,
                          PaymentMethod paymentMethod, PaymentStatus paymentStatus, PaymentType paymentType,
                          String shippingAddress, String trackingNumber, String proofImagesJson, OrderStatus status, LocalDateTime createdAt,
-                         List<OrderItemResponse> items) {
+                         List<OrderItemResponse> items, Long conversationId) {
         this.id = id;
         this.orderCode = orderCode;
         this.userId = userId;
@@ -59,6 +60,7 @@ public class OrderResponse {
         this.status = status;
         this.createdAt = createdAt;
         this.items = items;
+        this.conversationId = conversationId;
     }
 
     public Long getId() {
@@ -143,6 +145,10 @@ public class OrderResponse {
 
     public List<OrderItemResponse> getItems() {
         return items;
+    }
+
+    public Long getConversationId() {
+        return conversationId;
     }
 }
 

@@ -11,13 +11,16 @@ import com.keycap.keycapdesign.entity.Product;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.OrderStatus;
+import com.keycap.keycapdesign.enums.Role;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
+import com.keycap.keycapdesign.repository.ConversationRepository;
 import com.keycap.keycapdesign.repository.OrderItemRepository;
 import com.keycap.keycapdesign.repository.OrderRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.TicketRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -34,15 +37,20 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final TicketRepository ticketRepository;
+    private final ConversationRepository conversationRepository;
+    private final ConversationService conversationService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
-                        TicketRepository ticketRepository) {
+                        TicketRepository ticketRepository, ConversationRepository conversationRepository,
+                        @Lazy ConversationService conversationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.ticketRepository = ticketRepository;
+        this.conversationRepository = conversationRepository;
+        this.conversationService = conversationService;
     }
 
     public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
@@ -140,20 +148,30 @@ public class OrderService {
         return toResponse(order);
     }
 
-    public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request) {
+    /**
+     * Admin: PENDING → CONFIRMED only.
+     * Staff: CONFIRMED → PROCESSING → SHIPPING → DELIVERED → COMPLETED.
+     */
+    public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request, Role actorRole) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        // Validate state transition
         OrderStatus currentStatus = order.getStatus();
         OrderStatus newStatus = request.getStatus();
 
-        if (newStatus != OrderStatus.CANCELLED) {
+        if (newStatus == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Use the cancel endpoint to cancel an order");
+        }
+
+        if (actorRole == Role.ADMIN) {
+            // Admin can only approve PENDING → CONFIRMED
+            if (currentStatus != OrderStatus.PENDING || newStatus != OrderStatus.CONFIRMED) {
+                throw new BadRequestException("Admin can only confirm PENDING orders");
+            }
+        } else if (actorRole == Role.STAFF) {
+            // Staff handles CONFIRMED+
             boolean valid = false;
             switch (currentStatus) {
-                case PENDING:
-                    if (newStatus == OrderStatus.CONFIRMED) valid = true;
-                    break;
                 case CONFIRMED:
                     if (newStatus == OrderStatus.PROCESSING) valid = true;
                     break;
@@ -169,9 +187,11 @@ public class OrderService {
                 default:
                     valid = false;
             }
-            if (!valid && currentStatus != newStatus) {
+            if (!valid) {
                 throw new BadRequestException("Invalid status transition from " + currentStatus + " to " + newStatus);
             }
+        } else {
+            throw new BadRequestException("Unauthorized role for status update");
         }
 
         order.setStatus(newStatus);
@@ -183,8 +203,6 @@ public class OrderService {
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 String imagesJson = mapper.writeValueAsString(request.getProofImages());
-                // Append or replace? Replace for now, or merge if multiple phases have images.
-                // It's safer to read existing and append, but for simplicity we will just append to a list.
                 if (order.getProofImagesJson() != null && !order.getProofImagesJson().isEmpty() && !order.getProofImagesJson().equals("[]")) {
                     List<String> existing = mapper.readValue(order.getProofImagesJson(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
                     existing.addAll(request.getProofImages());
@@ -202,13 +220,29 @@ public class OrderService {
         return toResponse(order);
     }
 
-    public OrderResponse assignStaff(Long id, Long staffId) {
+    /**
+     * Admin assigns staff to order, confirms it (PENDING → CONFIRMED), and creates conversation.
+     */
+    public OrderResponse assignStaffAndConfirm(Long id, Long staffId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+        if (staff.getRole() != Role.STAFF) {
+            throw new BadRequestException("Assigned user is not a STAFF member");
+        }
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BadRequestException("Order must be PENDING to confirm and assign");
+        }
+
         order.setAssignedStaff(staff);
+        order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
+
+        // Auto-create or reuse conversation between customer and assigned staff
+        conversationService.getOrCreateConversationForOrder(
+                order.getUser().getId(), staffId, order.getId());
+
         return toResponse(order);
     }
 
@@ -216,6 +250,9 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CANCELLED) {
+            if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+                throw new BadRequestException("Can only cancel PENDING or CONFIRMED orders");
+            }
             order.setStatus(OrderStatus.CANCELLED);
             restoreStock(order);
             orderRepository.save(order);
@@ -261,12 +298,18 @@ public class OrderService {
         Long staffId = order.getAssignedStaff() != null ? order.getAssignedStaff().getId() : null;
         String staffName = order.getAssignedStaff() != null ? order.getAssignedStaff().getFullName() : null;
 
+        // Find linked conversation
+        Long conversationId = conversationRepository.findByOrderId(order.getId())
+                .map(c -> c.getId())
+                .orElse(null);
+
         return new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(), 
                 customerName, customerEmail, customerPhone, bankAccount, staffId, staffName,
                 order.getType(),
                 order.getTicket() == null ? null : order.getTicket().getId(), order.getTotalAmount(),
                 order.getPaymentMethod(), order.getPaymentStatus(), order.getPaymentType(), order.getShippingAddress(),
-                order.getTrackingNumber(), order.getProofImagesJson(), order.getStatus(), order.getCreatedAt(), items);
+                order.getTrackingNumber(), order.getProofImagesJson(), order.getStatus(), order.getCreatedAt(), items,
+                conversationId);
     }
 
     private String generateOrderCode() {
@@ -274,6 +317,3 @@ public class OrderService {
         return "OD-" + date + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 }
-
-
-
