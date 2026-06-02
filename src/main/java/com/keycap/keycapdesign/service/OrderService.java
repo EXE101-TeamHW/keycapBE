@@ -22,6 +22,7 @@ import com.keycap.keycapdesign.repository.TicketRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,11 +40,13 @@ public class OrderService {
     private final TicketRepository ticketRepository;
     private final ConversationRepository conversationRepository;
     private final ConversationService conversationService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
                         TicketRepository ticketRepository, ConversationRepository conversationRepository,
-                        @Lazy ConversationService conversationService) {
+                        @Lazy ConversationService conversationService,
+                        SimpMessagingTemplate messagingTemplate) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
@@ -51,6 +54,7 @@ public class OrderService {
         this.ticketRepository = ticketRepository;
         this.conversationRepository = conversationRepository;
         this.conversationService = conversationService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
@@ -120,7 +124,9 @@ public class OrderService {
         
         order.setTotalAmount(total);
         orderRepository.save(order);
-        return toResponse(order);
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        return response;
     }
 
     public List<OrderResponse> listOrders(Long userId) {
@@ -217,7 +223,9 @@ public class OrderService {
         }
 
         orderRepository.save(order);
-        return toResponse(order);
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        return response;
     }
 
     /**
@@ -243,21 +251,27 @@ public class OrderService {
         conversationService.getOrCreateConversationForOrder(
                 order.getUser().getId(), staffId, order.getId());
 
-        return toResponse(order);
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        return response;
     }
 
     public OrderResponse cancelOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CANCELLED) {
-            if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
-                throw new BadRequestException("Can only cancel PENDING or CONFIRMED orders");
+            if (order.getStatus() != OrderStatus.PENDING && 
+                order.getStatus() != OrderStatus.CONFIRMED && 
+                order.getStatus() != OrderStatus.PROCESSING) {
+                throw new BadRequestException("Can only cancel PENDING, CONFIRMED or PROCESSING orders");
             }
             order.setStatus(OrderStatus.CANCELLED);
             restoreStock(order);
             orderRepository.save(order);
         }
-        return toResponse(order);
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        return response;
     }
 
     public OrderResponse refundOrder(Long id) {
@@ -267,7 +281,9 @@ public class OrderService {
             order.setPaymentStatus(com.keycap.keycapdesign.enums.PaymentStatus.REFUNDED);
             orderRepository.save(order);
         }
-        return toResponse(order);
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        return response;
     }
 
     public void restoreStock(Order order) {
