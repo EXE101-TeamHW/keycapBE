@@ -33,7 +33,7 @@ public class User extends BaseEntity {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "bank_account")
+    @Column(name = "bank_account", columnDefinition = "nvarchar(255)")
     private String bankAccount;
 
     @Enumerated(EnumType.STRING)

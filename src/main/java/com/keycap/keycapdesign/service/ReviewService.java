@@ -11,6 +11,7 @@ import com.keycap.keycapdesign.repository.OrderRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.ReviewRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
+import com.keycap.keycapdesign.util.JsonUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,8 +45,9 @@ public class ReviewService {
             if (!order.getUser().getId().equals(user.getId())) {
                 throw new IllegalArgumentException("You can only review products from your own orders");
             }
-            if (!com.keycap.keycapdesign.enums.OrderStatus.DELIVERED.equals(order.getStatus())) {
-                throw new IllegalArgumentException("You can only review products from delivered orders");
+            if (!com.keycap.keycapdesign.enums.OrderStatus.DELIVERED.equals(order.getStatus())
+                    && !com.keycap.keycapdesign.enums.OrderStatus.COMPLETED.equals(order.getStatus())) {
+                throw new IllegalArgumentException("You can only review products from delivered or completed orders");
             }
             boolean containsProduct = order.getItems().stream()
                     .anyMatch(item -> item.getProduct() != null && item.getProduct().getId().equals(productId));
@@ -80,12 +82,26 @@ public class ReviewService {
         String userName = review.getUser() != null ? 
             (review.getUser().getFullName() != null ? review.getUser().getFullName() : review.getUser().getEmail()) : "Unknown User";
 
+        String productName = null;
+        String productImage = null;
+        if (review.getProduct() != null) {
+            productName = review.getProduct().getName();
+            List<String> images = JsonUtil.fromJson(review.getProduct().getImagesJson());
+            if (images != null && !images.isEmpty()) {
+                productImage = images.get(0);
+            }
+        }
+
         return new ReviewResponse(review.getId(),
                 review.getOrder() == null ? null : review.getOrder().getId(),
                 review.getProduct() == null ? null : review.getProduct().getId(),
                 review.getUser() == null ? null : review.getUser().getId(),
                 userName,
-                review.getRating(), review.getComment(), review.getCreatedAt());
+                review.getRating(), 
+                review.getComment(), 
+                review.getCreatedAt(),
+                productName,
+                productImage);
     }
 }
 
