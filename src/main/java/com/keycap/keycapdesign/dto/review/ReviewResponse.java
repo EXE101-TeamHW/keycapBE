@@ -11,9 +11,11 @@ public class ReviewResponse {
     private Integer rating;
     private String comment;
     private LocalDateTime createdAt;
+    private String productName;
+    private String productImage;
 
     public ReviewResponse(Long id, Long orderId, Long productId, Long userId, String userName, Integer rating, String comment,
-                          LocalDateTime createdAt) {
+                          LocalDateTime createdAt, String productName, String productImage) {
         this.id = id;
         this.orderId = orderId;
         this.productId = productId;
@@ -22,6 +24,8 @@ public class ReviewResponse {
         this.rating = rating;
         this.comment = comment;
         this.createdAt = createdAt;
+        this.productName = productName;
+        this.productImage = productImage;
     }
 
     public Long getId() {
@@ -54,6 +58,14 @@ public class ReviewResponse {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public String getProductImage() {
+        return productImage;
     }
 }
 
