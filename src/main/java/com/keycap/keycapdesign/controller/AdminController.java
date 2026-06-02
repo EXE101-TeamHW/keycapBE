@@ -2,7 +2,6 @@ package com.keycap.keycapdesign.controller;
 
 import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.order.OrderResponse;
-import com.keycap.keycapdesign.dto.order.OrderStatusUpdateRequest;
 import com.keycap.keycapdesign.dto.product.ProductRequest;
 import com.keycap.keycapdesign.dto.product.ProductResponse;
 import com.keycap.keycapdesign.dto.user.UserResponse;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -70,10 +70,23 @@ public class AdminController {
         return ApiResponse.success(orderService.listAllOrders());
     }
 
-    @PutMapping("/orders/{id}/status")
-    public ApiResponse<OrderResponse> updateOrderStatus(@PathVariable Long id,
-            @Valid @RequestBody OrderStatusUpdateRequest request) {
-        return ApiResponse.success(orderService.updateStatus(id, request));
+    /**
+     * Admin confirms PENDING order and assigns a staff member.
+     * This also auto-creates a conversation between the staff and customer.
+     * POST /api/admin/orders/{id}/confirm-assign?staffId=xxx
+     */
+    @PutMapping("/orders/{id}/confirm-assign")
+    public ApiResponse<OrderResponse> confirmAndAssign(@PathVariable Long id,
+            @RequestParam Long staffId) {
+        return ApiResponse.success(orderService.assignStaffAndConfirm(id, staffId));
+    }
+
+    /**
+     * Admin can cancel a PENDING or CONFIRMED order.
+     */
+    @PutMapping("/orders/{id}/cancel")
+    public ApiResponse<OrderResponse> cancelOrder(@PathVariable Long id) {
+        return ApiResponse.success(orderService.cancelOrder(id));
     }
 
     @GetMapping("/products")

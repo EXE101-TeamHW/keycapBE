@@ -27,6 +27,9 @@ public class Conversation extends BaseEntity {
     @JoinColumn(name = "staff_id")
     private User staff;
 
+    @Column(name = "order_id")
+    private Long orderId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ConversationStatus status = ConversationStatus.OPEN;

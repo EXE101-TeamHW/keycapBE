@@ -64,17 +64,12 @@ public class OrderController {
         return ApiResponse.success(orderService.listOrdersForStaff(currentUserService.getCurrentUserId()));
     }
 
+    /** Staff updates status: CONFIRMED → PROCESSING → SHIPPING → DELIVERED → COMPLETED */
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    @PreAuthorize("hasRole('STAFF')")
     public ApiResponse<OrderResponse> updateStatus(@PathVariable Long id,
             @Valid @RequestBody OrderStatusUpdateRequest request) {
-        return ApiResponse.success(orderService.updateStatus(id, request));
-    }
-
-    @PutMapping("/{id}/assign")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<OrderResponse> assignStaff(@PathVariable Long id, @RequestParam Long staffId) {
-        return ApiResponse.success(orderService.assignStaff(id, staffId));
+        return ApiResponse.success(orderService.updateStatus(id, request, Role.STAFF));
     }
 
     @PutMapping("/{id}/cancel")
