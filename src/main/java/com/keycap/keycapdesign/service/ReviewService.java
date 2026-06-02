@@ -7,6 +7,7 @@ import com.keycap.keycapdesign.entity.Product;
 import com.keycap.keycapdesign.entity.Review;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
+import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.repository.OrderRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.ReviewRepository;
@@ -44,6 +45,9 @@ public class ReviewService {
             
             if (!order.getUser().getId().equals(user.getId())) {
                 throw new IllegalArgumentException("You can only review products from your own orders");
+            }
+            if (reviewRepository.existsByOrderIdAndProductId(orderId, productId)) {
+                throw new BadRequestException("You have already reviewed this product for this order");
             }
             if (!com.keycap.keycapdesign.enums.OrderStatus.DELIVERED.equals(order.getStatus())
                     && !com.keycap.keycapdesign.enums.OrderStatus.COMPLETED.equals(order.getStatus())) {
