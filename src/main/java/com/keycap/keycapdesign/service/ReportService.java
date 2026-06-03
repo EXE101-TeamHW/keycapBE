@@ -44,6 +44,8 @@ public class ReportService {
         List<Order> orders = orderRepository.findByCreatedAtBetween(fromTime, toTime);
         DateTimeFormatter formatter = resolveFormatter(groupBy);
         Map<String, BigDecimal> totals = orders.stream()
+                .filter(order -> order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.COMPLETED || 
+                                 order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.DELIVERED)
                 .collect(Collectors.groupingBy(
                         order -> order.getCreatedAt().toLocalDate().format(formatter),
                         Collectors.mapping(Order::getTotalAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))

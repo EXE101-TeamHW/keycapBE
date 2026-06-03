@@ -50,6 +50,7 @@ public class CustomRequestService {
         ticket.setRequest(customRequest);
         ticket.setTicketCode(generateTicketCode());
         ticket.setStatus(TicketStatus.PENDING);
+        TicketService.setInitialDeadline(ticket, customRequest.getNotes());
         ticketRepository.save(ticket);
 
         return toResponse(customRequest, ticket.getId());
@@ -72,7 +73,12 @@ public class CustomRequestService {
     }
 
     private CustomRequestResponse toResponse(CustomRequest customRequest, Long ticketId) {
+        String customerName = customRequest.getUser().getFullName() != null ? customRequest.getUser().getFullName() : "Customer";
+        String customerEmail = customRequest.getUser().getEmail();
+        String customerPhone = customRequest.getUser().getPhone();
+        
         return new CustomRequestResponse(customRequest.getId(), ticketId, customRequest.getUser().getId(),
+                customerName, customerEmail, customerPhone,
                 customRequest.getDesignName(), customRequest.getLayout(), customRequest.getTheme(),
                 JsonUtil.fromJson(customRequest.getReferenceImagesJson()), customRequest.getNotes(),
                 customRequest.getStatus(), customRequest.getCreatedAt());

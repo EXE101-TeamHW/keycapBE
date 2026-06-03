@@ -50,18 +50,4 @@ public class ProductController {
     public ApiResponse<ProductResponse> get(@PathVariable Long id) {
         return ApiResponse.success(productService.getProduct(id));
     }
-
-    @PostMapping("/{id}/reviews")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ApiResponse<ReviewResponse> createReview(@PathVariable Long id,
-            @RequestParam(required = false) Long orderId,
-            @Valid @RequestBody ReviewRequest request) {
-        request.setUserId(currentUserService.getCurrentUserId());
-        return ApiResponse.success(reviewService.createReview(id, orderId, request));
-    }
-
-    @GetMapping("/{id}/reviews")
-    public ApiResponse<List<ReviewResponse>> listReviews(@PathVariable Long id) {
-        return ApiResponse.success(reviewService.listByProduct(id));
-    }
 }

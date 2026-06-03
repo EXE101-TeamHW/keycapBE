@@ -20,12 +20,14 @@ public class MockupService {
     private final MockupRepository mockupRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final TicketService ticketService;
 
     public MockupService(MockupRepository mockupRepository, TicketRepository ticketRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository, TicketService ticketService) {
         this.mockupRepository = mockupRepository;
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
+        this.ticketService = ticketService;
     }
 
     public MockupResponse create(Long ticketId, MockupCreateRequest request) {
@@ -43,6 +45,7 @@ public class MockupService {
         mockupRepository.save(mockup);
         ticket.setStatus(TicketStatus.AWAITING_APPROVAL);
         ticketRepository.save(ticket);
+        ticketService.broadcastTicketUpdate(ticket);
         return toResponse(mockup);
     }
 

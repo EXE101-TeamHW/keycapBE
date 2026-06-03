@@ -24,5 +24,15 @@ public class OrderStatusUpdateRequest {
     public void setTrackingNumber(String trackingNumber) {
         this.trackingNumber = trackingNumber;
     }
+
+    private java.util.List<String> proofImages;
+
+    public java.util.List<String> getProofImages() {
+        return proofImages;
+    }
+
+    public void setProofImages(java.util.List<String> proofImages) {
+        this.proofImages = proofImages;
+    }
 }
 

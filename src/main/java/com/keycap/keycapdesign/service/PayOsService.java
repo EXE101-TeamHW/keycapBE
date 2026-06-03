@@ -88,8 +88,11 @@ public class PayOsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String status = queryParams.get("status");
         boolean success = PAID_STATUS.equalsIgnoreCase(status);
-        
-        if (!success && "CANCELLED".equalsIgnoreCase(status) && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
+        if (success && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
+            order.setPaymentMethod(PaymentMethod.PAYOS);
+            order.setPaymentStatus(PaymentStatus.PAID);
+            orderRepository.save(order);
+        } else if (!success && "CANCELLED".equalsIgnoreCase(status) && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
             order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
             orderService.restoreStock(order);
             orderRepository.save(order);

@@ -22,8 +22,7 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(user -> new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(),
-                        user.getAvatarUrl(), user.getRole(), user.getStatus(), user.getCreatedAt()))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -31,28 +30,39 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setStatus(request.getStatus());
-        userRepository.save(user);
-        return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), user.getAvatarUrl(),
-                user.getRole(), user.getStatus(), user.getCreatedAt());
+        return toResponse(userRepository.save(user));
     }
 
     public UserResponse updateRole(Long userId, UserRoleUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setRole(request.getRole());
-        userRepository.save(user);
-        return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), user.getAvatarUrl(),
-                user.getRole(), user.getStatus(), user.getCreatedAt());
+        return toResponse(userRepository.save(user));
     }
 
     public UserResponse updateProfile(Long userId, UserProfileUpdateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (request.getFullName() != null) user.setFullName(request.getFullName());
-        if (request.getPhone() != null) user.setPhone(request.getPhone());
-        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
-        userRepository.save(user);
-        return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), user.getAvatarUrl(),
-                user.getRole(), user.getStatus(), user.getCreatedAt());
+        
+        user.setFullName(request.getFullName());
+        user.setPhone(request.getPhone());
+        user.setAvatarUrl(request.getAvatarUrl());
+        user.setBankAccount(request.getBankAccount());
+        
+        return toResponse(userRepository.save(user));
+    }
+
+    private UserResponse toResponse(User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getAvatarUrl(),
+                user.getBankAccount(),
+                user.getRole(),
+                user.getStatus(),
+                user.getCreatedAt()
+        );
     }
 }

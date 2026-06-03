@@ -42,6 +42,10 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "ticket_id")
     private Ticket ticket;
 
+    @ManyToOne
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff;
+
     @Column(name = "total_amount", precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
@@ -60,10 +64,24 @@ public class Order extends BaseEntity {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
+    @Column(name = "proof_images", columnDefinition = "nvarchar(max)")
+    private String proofImagesJson;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
 
     @OneToMany(mappedBy = "order")
     private List<OrderItem> items = new ArrayList<>();
+
+    @Column(name = "delivery_deadline")
+    private java.time.LocalDate deliveryDeadline;
+
+    public java.time.LocalDate getDeliveryDeadline() {
+        return deliveryDeadline;
+    }
+
+    public void setDeliveryDeadline(java.time.LocalDate deliveryDeadline) {
+        this.deliveryDeadline = deliveryDeadline;
+    }
 }
 
