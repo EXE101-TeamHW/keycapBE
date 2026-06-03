@@ -13,6 +13,7 @@ public class RegisterRequest {
 
     private String fullName;
     private String phone;
+    private String bankAccount;
 
     public String getEmail() {
         return email;
@@ -44,6 +45,14 @@ public class RegisterRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getBankAccount() {
+        return bankAccount;
+    }
+
+    public void setBankAccount(String bankAccount) {
+        this.bankAccount = bankAccount;
     }
 }
 
