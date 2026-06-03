@@ -72,5 +72,16 @@ public class Order extends BaseEntity {
 
     @OneToMany(mappedBy = "order")
     private List<OrderItem> items = new ArrayList<>();
+
+    @Column(name = "delivery_deadline")
+    private java.time.LocalDate deliveryDeadline;
+
+    public java.time.LocalDate getDeliveryDeadline() {
+        return deliveryDeadline;
+    }
+
+    public void setDeliveryDeadline(java.time.LocalDate deliveryDeadline) {
+        this.deliveryDeadline = deliveryDeadline;
+    }
 }
 

@@ -86,7 +86,7 @@ public class AdminController {
      */
     @PutMapping("/orders/{id}/cancel")
     public ApiResponse<OrderResponse> cancelOrder(@PathVariable Long id) {
-        return ApiResponse.success(orderService.cancelOrder(id));
+        return ApiResponse.success(orderService.cancelOrder(id, com.keycap.keycapdesign.enums.Role.ADMIN));
     }
 
     @GetMapping("/products")

@@ -41,12 +41,14 @@ public class OrderService {
     private final ConversationRepository conversationRepository;
     private final ConversationService conversationService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final TicketService ticketService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
                         TicketRepository ticketRepository, ConversationRepository conversationRepository,
                         @Lazy ConversationService conversationService,
-                        SimpMessagingTemplate messagingTemplate) {
+                        SimpMessagingTemplate messagingTemplate,
+                        TicketService ticketService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
@@ -55,6 +57,7 @@ public class OrderService {
         this.conversationRepository = conversationRepository;
         this.conversationService = conversationService;
         this.messagingTemplate = messagingTemplate;
+        this.ticketService = ticketService;
     }
 
     public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
@@ -75,13 +78,16 @@ public class OrderService {
         order.setPaymentType(request.getPaymentType());
         order.setShippingAddress(request.getShippingAddress());
         order.setStatus(OrderStatus.PENDING);
+        if (request.getType() == com.keycap.keycapdesign.enums.OrderType.SHOP) {
+            setOrderDeliveryDeadline(order);
+        }
         orderRepository.save(order);
 
         BigDecimal total = BigDecimal.ZERO;
         
         if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM) {
-            if (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(1000000)) < 0) {
-                throw new BadRequestException("Custom order minimum deposit amount is 1,000,000 VND");
+            if (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(10000)) < 0) {
+                throw new BadRequestException("Custom order minimum deposit amount is 10,000 VND");
             }
             total = request.getTotalAmount();
         } else {
@@ -201,6 +207,9 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
+        if (newStatus == OrderStatus.SHIPPING && order.getDeliveryDeadline() == null) {
+            setOrderDeliveryDeadline(order);
+        }
         if (request.getTrackingNumber() != null) {
             order.setTrackingNumber(request.getTrackingNumber());
         }
@@ -256,14 +265,32 @@ public class OrderService {
         return response;
     }
 
-    public OrderResponse cancelOrder(Long id) {
+    public OrderResponse cancelOrder(Long id, Role actorRole) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CANCELLED) {
-            if (order.getStatus() != OrderStatus.PENDING && 
-                order.getStatus() != OrderStatus.CONFIRMED && 
-                order.getStatus() != OrderStatus.PROCESSING) {
-                throw new BadRequestException("Can only cancel PENDING, CONFIRMED or PROCESSING orders");
+            if (order.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM && order.getTicket() != null) {
+                com.keycap.keycapdesign.enums.TicketStatus tStatus = order.getTicket().getStatus();
+                if (actorRole == Role.CUSTOMER || actorRole == Role.ADMIN) {
+                    if (tStatus != com.keycap.keycapdesign.enums.TicketStatus.PENDING && 
+                        tStatus != com.keycap.keycapdesign.enums.TicketStatus.IN_REVIEW) {
+                        throw new BadRequestException("Không thể hủy đơn hàng custom sau khi bắt đầu thiết kế");
+                    }
+                } else if (actorRole == Role.STAFF) {
+                    if (tStatus == com.keycap.keycapdesign.enums.TicketStatus.CANCELLED ||
+                        tStatus == com.keycap.keycapdesign.enums.TicketStatus.COMPLETED) {
+                        throw new BadRequestException("Không thể hủy ticket custom ở trạng thái này");
+                    }
+                }
+                order.getTicket().setStatus(com.keycap.keycapdesign.enums.TicketStatus.CANCELLED);
+                ticketRepository.save(order.getTicket());
+                ticketService.broadcastTicketUpdate(order.getTicket());
+            } else {
+                if (order.getStatus() != OrderStatus.PENDING && 
+                    order.getStatus() != OrderStatus.CONFIRMED && 
+                    order.getStatus() != OrderStatus.PROCESSING) {
+                    throw new BadRequestException("Can only cancel PENDING, CONFIRMED or PROCESSING orders");
+                }
             }
             order.setStatus(OrderStatus.CANCELLED);
             restoreStock(order);
@@ -319,13 +346,27 @@ public class OrderService {
                 .map(c -> c.getId())
                 .orElse(null);
 
+        com.keycap.keycapdesign.enums.TicketStatus ticketStatus = order.getTicket() != null ? order.getTicket().getStatus() : null;
+
         return new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(), 
                 customerName, customerEmail, customerPhone, bankAccount, staffId, staffName,
                 order.getType(),
                 order.getTicket() == null ? null : order.getTicket().getId(), order.getTotalAmount(),
                 order.getPaymentMethod(), order.getPaymentStatus(), order.getPaymentType(), order.getShippingAddress(),
                 order.getTrackingNumber(), order.getProofImagesJson(), order.getStatus(), order.getCreatedAt(), items,
-                conversationId);
+                conversationId, ticketStatus, order.getDeliveryDeadline());
+    }
+
+    private void setOrderDeliveryDeadline(Order order) {
+        String address = order.getShippingAddress();
+        if (address != null) {
+            String addrLower = address.toLowerCase();
+            if (addrLower.contains("hồ chí minh") || addrLower.contains("ho chi minh") || addrLower.contains("hcm")) {
+                order.setDeliveryDeadline(LocalDate.now().plusDays(3));
+            } else {
+                order.setDeliveryDeadline(LocalDate.now().plusDays(7));
+            }
+        }
     }
 
     private String generateOrderCode() {
