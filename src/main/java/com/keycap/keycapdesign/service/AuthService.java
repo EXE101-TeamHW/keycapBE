@@ -1,10 +1,6 @@
 package com.keycap.keycapdesign.service;
 
-import com.keycap.keycapdesign.dto.auth.AuthResponse;
-import com.keycap.keycapdesign.dto.auth.LoginRequest;
-import com.keycap.keycapdesign.dto.auth.RegisterRequest;
-import com.keycap.keycapdesign.dto.auth.ResendVerificationRequest;
-import com.keycap.keycapdesign.dto.auth.VerifyEmailRequest;
+import com.keycap.keycapdesign.dto.auth.*;
 import com.keycap.keycapdesign.entity.EmailVerificationCode;
 import com.keycap.keycapdesign.dto.user.UserResponse;
 import com.keycap.keycapdesign.entity.User;
@@ -48,6 +44,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
+        user.setBankAccount(request.getBankAccount());
         user.setRole(Role.CUSTOMER);
         user.setStatus(UserStatus.ACTIVE);
         user.setProvider(AuthProvider.LOCAL);
@@ -73,7 +70,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), user.getAvatarUrl(),
-                user.getRole(), user.getStatus(), user.getCreatedAt());
+                user.getBankAccount(), user.getRole(), user.getStatus(), user.getCreatedAt());
     }
 
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
@@ -115,6 +112,38 @@ public class AuthService {
         return String.valueOf(value);
     }
 
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại trong hệ thống"));
+        
+        String codeValue = generateCode();
+        EmailVerificationCode code = new EmailVerificationCode();
+        code.setUser(user);
+        code.setCode(codeValue);
+        code.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+        codeRepository.save(code);
+        
+        emailService.sendForgotPasswordCode(user.getEmail(), codeValue);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại trong hệ thống"));
+        
+        EmailVerificationCode code = codeRepository.findByUserIdAndCodeAndUsedAtIsNull(user.getId(), request.getCode())
+                .orElseThrow(() -> new BadRequestException("Mã xác minh không chính xác"));
+                
+        if (code.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Mã xác minh đã hết hạn");
+        }
+        
+        code.setUsedAt(LocalDateTime.now());
+        codeRepository.save(code);
+        
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setEmailVerified(true);
+        userRepository.save(user);
+    }
 }
 
 

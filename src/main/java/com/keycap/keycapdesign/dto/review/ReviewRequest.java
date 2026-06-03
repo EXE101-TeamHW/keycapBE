@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 public class ReviewRequest {
-    @NotNull
     private Long userId;
 
     @Min(1)

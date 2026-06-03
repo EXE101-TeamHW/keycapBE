@@ -11,6 +11,9 @@ public class CustomRequestResponse {
     private Long id;
     private Long ticketId;
     private Long userId;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
     private String designName;
     private LayoutType layout;
     private ProductTheme theme;
@@ -19,11 +22,14 @@ public class CustomRequestResponse {
     private TicketStatus status;
     private LocalDateTime createdAt;
 
-    public CustomRequestResponse(Long id, Long ticketId, Long userId, String designName, LayoutType layout, ProductTheme theme,
+    public CustomRequestResponse(Long id, Long ticketId, Long userId, String customerName, String customerEmail, String customerPhone, String designName, LayoutType layout, ProductTheme theme,
                                  List<String> referenceImages, String notes, TicketStatus status, LocalDateTime createdAt) {
         this.id = id;
         this.ticketId = ticketId;
         this.userId = userId;
+        this.customerName = customerName;
+        this.customerEmail = customerEmail;
+        this.customerPhone = customerPhone;
         this.designName = designName;
         this.layout = layout;
         this.theme = theme;
@@ -43,6 +49,18 @@ public class CustomRequestResponse {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
     }
 
     public String getDesignName() {

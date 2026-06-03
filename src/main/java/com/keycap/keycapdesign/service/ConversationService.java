@@ -58,6 +58,33 @@ public class ConversationService {
         return toConversationResponse(conversation, customer.getId());
     }
 
+    public ConversationResponse getOrCreateConversationForOrder(Long customerId, Long staffId, Long orderId) {
+        // Reuse existing conversation for this order if any
+        return conversationRepository.findByOrderId(orderId)
+                .map(existing -> {
+                    // Update staff if changed
+                    if (staffId != null && (existing.getStaff() == null || !existing.getStaff().getId().equals(staffId))) {
+                        User newStaff = userRepository.findById(staffId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+                        existing.setStaff(newStaff);
+                        conversationRepository.save(existing);
+                    }
+                    return toConversationResponse(existing, customerId);
+                })
+                .orElseGet(() -> {
+                    User customer = getUser(customerId);
+                    User staff = staffId != null ? userRepository.findById(staffId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Staff not found")) : null;
+                    Conversation conversation = new Conversation();
+                    conversation.setCustomer(customer);
+                    conversation.setStaff(staff);
+                    conversation.setOrderId(orderId);
+                    conversation.setStatus(ConversationStatus.OPEN);
+                    conversationRepository.save(conversation);
+                    return toConversationResponse(conversation, customerId);
+                });
+    }
+
     public List<ConversationResponse> listConversations(Long userId) {
         User user = getUser(userId);
         List<Conversation> conversations;

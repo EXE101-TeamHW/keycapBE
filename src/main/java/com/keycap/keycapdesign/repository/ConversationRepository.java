@@ -11,4 +11,5 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     List<Conversation> findByStaffIdOrderByCreatedAtDesc(Long staffId);
     List<Conversation> findByStatusOrderByCreatedAtDesc(ConversationStatus status);
     List<Conversation> findAllByOrderByCreatedAtDesc();
+    java.util.Optional<Conversation> findByOrderId(Long orderId);
 }
