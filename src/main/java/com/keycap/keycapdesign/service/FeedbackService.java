@@ -25,13 +25,15 @@ public class FeedbackService {
     private final MockupRepository mockupRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final TicketService ticketService;
 
     public FeedbackService(MockupFeedbackRepository feedbackRepository, MockupRepository mockupRepository,
-                           TicketRepository ticketRepository, UserRepository userRepository) {
+                           TicketRepository ticketRepository, UserRepository userRepository, TicketService ticketService) {
         this.feedbackRepository = feedbackRepository;
         this.mockupRepository = mockupRepository;
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
+        this.ticketService = ticketService;
     }
 
     public MockupFeedbackResponse create(Long ticketId, Long mockupId, MockupFeedbackRequest request) {
@@ -56,11 +58,15 @@ public class FeedbackService {
                 throw new BadRequestException("Max revisions reached");
             }
             ticket.setRevisionCount(ticket.getRevisionCount() + 1);
+            TicketStatus oldStatus = ticket.getStatus();
             ticket.setStatus(TicketStatus.DESIGNING);
+            TicketService.updateDeadlineForStatus(ticket, oldStatus, TicketStatus.DESIGNING);
             ticketRepository.save(ticket);
+            ticketService.broadcastTicketUpdate(ticket);
         } else if (request.getType() == FeedbackType.APPROVED) {
             ticket.setStatus(TicketStatus.APPROVED);
             ticketRepository.save(ticket);
+            ticketService.broadcastTicketUpdate(ticket);
         }
 
         return toResponse(feedback);

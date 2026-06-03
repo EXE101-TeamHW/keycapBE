@@ -74,13 +74,14 @@ public class OrderController {
 
     @PutMapping("/{id}/cancel")
     public ApiResponse<OrderResponse> cancel(@PathVariable Long id) {
-        if (currentUserService.getCurrentUser().getRole() == Role.CUSTOMER) {
+        Role role = currentUserService.getCurrentUser().getRole();
+        if (role == Role.CUSTOMER) {
             OrderResponse response = orderService.getOrder(id);
             if (!currentUserService.getCurrentUserId().equals(response.getUserId())) {
                 throw new UnauthorizedException("Access denied");
             }
         }
-        return ApiResponse.success(orderService.cancelOrder(id));
+        return ApiResponse.success(orderService.cancelOrder(id, role));
     }
 
     @PutMapping("/{id}/refund")

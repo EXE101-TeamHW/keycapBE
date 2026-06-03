@@ -23,11 +23,20 @@ public class TicketResponse {
     private String customerEmail;
     private String customerPhone;
     private String assignedStaffName;
+    private String notes;
+    private String customerBankAccount;
+    private String layout;
+    private String theme;
+    private Long orderId;
+    private String orderStatus;
+    private String orderPaymentStatus;
 
     public TicketResponse(Long id, String ticketCode, Long requestId, Long assignedStaffId, Long adminId,
                           LocalDate deadline, Integer revisionCount, Integer maxRevisions, TicketStatus status,
                           LocalDateTime createdAt, String requestDesignName, String referenceImagesJson, 
-                          Long customerId, String customerName, String customerEmail, String customerPhone, String assignedStaffName) {
+                          Long customerId, String customerName, String customerEmail, String customerPhone, String assignedStaffName,
+                          String notes, String customerBankAccount, String layout, String theme,
+                          Long orderId, String orderStatus, String orderPaymentStatus) {
         this.id = id;
         this.ticketCode = ticketCode;
         this.requestId = requestId;
@@ -45,6 +54,13 @@ public class TicketResponse {
         this.customerEmail = customerEmail;
         this.customerPhone = customerPhone;
         this.assignedStaffName = assignedStaffName;
+        this.notes = notes;
+        this.customerBankAccount = customerBankAccount;
+        this.layout = layout;
+        this.theme = theme;
+        this.orderId = orderId;
+        this.orderStatus = orderStatus;
+        this.orderPaymentStatus = orderPaymentStatus;
     }
 
     public Long getId() { return id; }
@@ -64,4 +80,11 @@ public class TicketResponse {
     public String getCustomerEmail() { return customerEmail; }
     public String getCustomerPhone() { return customerPhone; }
     public String getAssignedStaffName() { return assignedStaffName; }
+    public String getNotes() { return notes; }
+    public String getCustomerBankAccount() { return customerBankAccount; }
+    public String getLayout() { return layout; }
+    public String getTheme() { return theme; }
+    public Long getOrderId() { return orderId; }
+    public String getOrderStatus() { return orderStatus; }
+    public String getOrderPaymentStatus() { return orderPaymentStatus; }
 }

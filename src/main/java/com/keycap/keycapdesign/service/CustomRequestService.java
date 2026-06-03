@@ -50,6 +50,7 @@ public class CustomRequestService {
         ticket.setRequest(customRequest);
         ticket.setTicketCode(generateTicketCode());
         ticket.setStatus(TicketStatus.PENDING);
+        TicketService.setInitialDeadline(ticket, customRequest.getNotes());
         ticketRepository.save(ticket);
 
         return toResponse(customRequest, ticket.getId());

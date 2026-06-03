@@ -33,12 +33,15 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
     private Long conversationId;
+    private com.keycap.keycapdesign.enums.TicketStatus ticketStatus;
+    private java.time.LocalDate deliveryDeadline;
 
     public OrderResponse(Long id, String orderCode, Long userId, String customerName, String customerEmail, String customerPhone, String customerBankAccount, 
                          Long staffId, String staffName, OrderType type, Long ticketId, BigDecimal totalAmount,
                          PaymentMethod paymentMethod, PaymentStatus paymentStatus, PaymentType paymentType,
                          String shippingAddress, String trackingNumber, String proofImagesJson, OrderStatus status, LocalDateTime createdAt,
-                         List<OrderItemResponse> items, Long conversationId) {
+                         List<OrderItemResponse> items, Long conversationId, com.keycap.keycapdesign.enums.TicketStatus ticketStatus,
+                         java.time.LocalDate deliveryDeadline) {
         this.id = id;
         this.orderCode = orderCode;
         this.userId = userId;
@@ -61,6 +64,8 @@ public class OrderResponse {
         this.createdAt = createdAt;
         this.items = items;
         this.conversationId = conversationId;
+        this.ticketStatus = ticketStatus;
+        this.deliveryDeadline = deliveryDeadline;
     }
 
     public Long getId() {
@@ -149,6 +154,14 @@ public class OrderResponse {
 
     public Long getConversationId() {
         return conversationId;
+    }
+
+    public com.keycap.keycapdesign.enums.TicketStatus getTicketStatus() {
+        return ticketStatus;
+    }
+
+    public java.time.LocalDate getDeliveryDeadline() {
+        return deliveryDeadline;
     }
 }
 
