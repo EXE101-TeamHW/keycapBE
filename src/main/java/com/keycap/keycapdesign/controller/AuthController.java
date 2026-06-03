@@ -1,11 +1,7 @@
 package com.keycap.keycapdesign.controller;
 
 import com.keycap.keycapdesign.common.ApiResponse;
-import com.keycap.keycapdesign.dto.auth.AuthResponse;
-import com.keycap.keycapdesign.dto.auth.LoginRequest;
-import com.keycap.keycapdesign.dto.auth.RegisterRequest;
-import com.keycap.keycapdesign.dto.auth.ResendVerificationRequest;
-import com.keycap.keycapdesign.dto.auth.VerifyEmailRequest;
+import com.keycap.keycapdesign.dto.auth.*;
 import com.keycap.keycapdesign.dto.user.UserProfileUpdateRequest;
 import com.keycap.keycapdesign.dto.user.UserResponse;
 import com.keycap.keycapdesign.security.CurrentUserService;
@@ -56,6 +52,18 @@ public class AuthController {
     @PostMapping("/resend")
     public ApiResponse<Object> resend(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerification(request);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Object> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Object> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
         return ApiResponse.success(null);
     }
 
