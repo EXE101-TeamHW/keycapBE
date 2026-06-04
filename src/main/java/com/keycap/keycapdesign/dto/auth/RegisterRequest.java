@@ -2,6 +2,7 @@ package com.keycap.keycapdesign.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 public class RegisterRequest {
     @Email
@@ -12,8 +13,9 @@ public class RegisterRequest {
     private String password;
 
     private String fullName;
+
+    @Pattern(regexp = "^(03|05|08|09)\\d{8}$", message = "Phone must be 10 digits and start with 03, 05, 08 or 09")
     private String phone;
-    private String bankAccount;
 
     public String getEmail() {
         return email;
@@ -47,12 +49,5 @@ public class RegisterRequest {
         this.phone = phone;
     }
 
-    public String getBankAccount() {
-        return bankAccount;
-    }
-
-    public void setBankAccount(String bankAccount) {
-        this.bankAccount = bankAccount;
-    }
 }
 

@@ -72,7 +72,7 @@ public class AuthController {
      */
     @PutMapping("/profile")
     public ApiResponse<UserResponse> updateProfile(
-            @RequestBody UserProfileUpdateRequest request) {
+            @Valid @RequestBody UserProfileUpdateRequest request) {
         long userId = currentUserService.getCurrentUserId();
         return ApiResponse.success(userService.updateProfile(userId, request));
     }

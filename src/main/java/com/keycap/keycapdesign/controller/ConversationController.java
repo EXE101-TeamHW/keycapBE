@@ -6,6 +6,9 @@ import com.keycap.keycapdesign.dto.chat.ConversationCreateRequest;
 import com.keycap.keycapdesign.dto.chat.ConversationResponse;
 import com.keycap.keycapdesign.dto.chat.MarkReadRequest;
 import com.keycap.keycapdesign.dto.chat.MessageResponse;
+import com.keycap.keycapdesign.entity.User;
+import com.keycap.keycapdesign.enums.Role;
+import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.ConversationService;
 import jakarta.validation.Valid;
@@ -32,10 +35,18 @@ public class ConversationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER','STAFF')")
     public ApiResponse<ConversationResponse> create(@Valid @RequestBody ConversationCreateRequest request) {
-        request.setCustomerId(currentUserService.getCurrentUserId());
-        return ApiResponse.success(conversationService.createConversation(request));
+        User currentUser = currentUserService.getCurrentUser();
+        if (currentUser.getRole() == Role.CUSTOMER) {
+            request.setCustomerId(currentUser.getId());
+        } else if (currentUser.getRole() == Role.STAFF) {
+            if (request.getOrderId() == null) {
+                throw new BadRequestException("orderId is required for STAFF to start a conversation");
+            }
+            request.setStaffId(currentUser.getId());
+        }
+        return ApiResponse.success(conversationService.createConversation(request, currentUser.getId()));
     }
 
     @GetMapping

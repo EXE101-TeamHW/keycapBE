@@ -1,12 +1,11 @@
 package com.keycap.keycapdesign.dto.chat;
 
-import jakarta.validation.constraints.NotNull;
-
 public class ConversationCreateRequest {
-    @NotNull
     private Long customerId;
 
     private Long staffId;
+
+    private Long orderId;
 
     public Long getCustomerId() {
         return customerId;
@@ -22,5 +21,13 @@ public class ConversationCreateRequest {
 
     public void setStaffId(Long staffId) {
         this.staffId = staffId;
+    }
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
     }
 }

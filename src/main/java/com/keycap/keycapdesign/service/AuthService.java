@@ -44,7 +44,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        user.setBankAccount(request.getBankAccount());
         user.setRole(Role.CUSTOMER);
         user.setStatus(UserStatus.ACTIVE);
         user.setProvider(AuthProvider.LOCAL);
