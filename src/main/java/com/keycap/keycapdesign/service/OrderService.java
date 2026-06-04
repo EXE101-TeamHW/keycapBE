@@ -136,19 +136,19 @@ public class OrderService {
     }
 
     public List<OrderResponse> listOrders(Long userId) {
-        return orderRepository.findByUserId(userId).stream()
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public List<OrderResponse> listAllOrders() {
-        return orderRepository.findAll().stream()
+        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public List<OrderResponse> listOrdersForStaff(Long staffId) {
-        return orderRepository.findAll().stream()
+        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
                 .filter(o -> o.getAssignedStaff() != null && o.getAssignedStaff().getId().equals(staffId))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -243,6 +243,9 @@ public class OrderService {
     public OrderResponse assignStaffAndConfirm(Long id, Long staffId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot assign staff to a cancelled order");
+        }
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
         if (staff.getRole() != Role.STAFF) {
@@ -269,6 +272,9 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CANCELLED) {
+            if (actorRole == Role.CUSTOMER && order.getStatus() != OrderStatus.PENDING) {
+                throw new BadRequestException("Bạn chỉ có thể hủy đơn hàng khi đơn còn chờ duyệt");
+            }
             if (order.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM && order.getTicket() != null) {
                 com.keycap.keycapdesign.enums.TicketStatus tStatus = order.getTicket().getStatus();
                 if (actorRole == Role.CUSTOMER || actorRole == Role.ADMIN) {

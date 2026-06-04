@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserId(Long userId);
+    List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<Order> findAllByOrderByCreatedAtDesc();
     List<Order> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
     Optional<Order> findByTicketId(Long ticketId);
 }
