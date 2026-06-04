@@ -8,6 +8,7 @@ import com.keycap.keycapdesign.dto.chat.MessageRequest;
 import com.keycap.keycapdesign.dto.chat.MessageResponse;
 import com.keycap.keycapdesign.entity.Conversation;
 import com.keycap.keycapdesign.entity.Message;
+import com.keycap.keycapdesign.entity.Order;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.ConversationStatus;
 import com.keycap.keycapdesign.enums.MessageType;
@@ -16,6 +17,7 @@ import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.repository.ConversationRepository;
 import com.keycap.keycapdesign.repository.MessageRepository;
+import com.keycap.keycapdesign.repository.OrderRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +30,21 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     public ConversationService(ConversationRepository conversationRepository, MessageRepository messageRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository, OrderRepository orderRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
     }
 
-    public ConversationResponse createConversation(ConversationCreateRequest request) {
+    @Transactional
+    public ConversationResponse createConversation(ConversationCreateRequest request, Long viewerId) {
+        if (request.getCustomerId() == null) {
+            throw new BadRequestException("customerId is required");
+        }
         User customer = getUser(request.getCustomerId());
         if (customer.getRole() != Role.CUSTOMER) {
             throw new BadRequestException("Only CUSTOMER can start a conversation");
@@ -50,12 +58,40 @@ public class ConversationService {
             }
         }
 
+        Order order = null;
+        if (request.getOrderId() != null) {
+            order = orderRepository.findById(request.getOrderId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+            validateOrderParticipants(order, customer, staff);
+            User assignedStaff = getAssignedStaff(order);
+            if (staff == null) {
+                staff = assignedStaff;
+            }
+
+            User finalStaff = staff;
+            Long finalOrderId = order.getId();
+            return conversationRepository.findByOrderId(finalOrderId)
+                    .map(existing -> {
+                        if (existing.getStaff() == null && finalStaff != null) {
+                            existing.setStaff(finalStaff);
+                            conversationRepository.save(existing);
+                        }
+                        return toConversationResponse(existing, viewerId);
+                    })
+                    .orElseGet(() -> createConversation(customer, finalStaff, finalOrderId, viewerId));
+        }
+
+        return createConversation(customer, staff, null, viewerId);
+    }
+
+    private ConversationResponse createConversation(User customer, User staff, Long orderId, Long viewerId) {
         Conversation conversation = new Conversation();
         conversation.setCustomer(customer);
         conversation.setStaff(staff);
+        conversation.setOrderId(orderId);
         conversation.setStatus(ConversationStatus.OPEN);
         conversationRepository.save(conversation);
-        return toConversationResponse(conversation, customer.getId());
+        return toConversationResponse(conversation, viewerId);
     }
 
     public ConversationResponse getOrCreateConversationForOrder(Long customerId, Long staffId, Long orderId) {
@@ -176,6 +212,29 @@ public class ConversationService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    private void validateOrderParticipants(Order order, User customer, User staff) {
+        if (order.getUser() == null || !order.getUser().getId().equals(customer.getId())) {
+            throw new BadRequestException("Order does not belong to customer");
+        }
+        User assignedStaff = getAssignedStaff(order);
+        if (staff != null && assignedStaff != null && !assignedStaff.getId().equals(staff.getId())) {
+            throw new BadRequestException("Staff is not assigned to this order");
+        }
+        if (staff != null && assignedStaff == null) {
+            throw new BadRequestException("Order has no assigned staff");
+        }
+    }
+
+    private User getAssignedStaff(Order order) {
+        if (order.getAssignedStaff() != null) {
+            return order.getAssignedStaff();
+        }
+        if (order.getTicket() != null) {
+            return order.getTicket().getAssignedStaff();
+        }
+        return null;
+    }
+
     private void validateParticipant(Conversation conversation, User user) {
         if (user.getRole() == Role.CUSTOMER && conversation.getCustomer().getId().equals(user.getId())) {
             return;
@@ -205,6 +264,7 @@ public class ConversationService {
                 conversation.getCustomer().getFullName(),
                 staff == null ? null : staff.getId(),
                 staff == null ? null : staff.getFullName(),
+                conversation.getOrderId(),
                 conversation.getStatus(),
                 unreadCount,
                 conversation.getCreatedAt());

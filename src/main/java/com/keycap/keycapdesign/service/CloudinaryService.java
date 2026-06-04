@@ -3,6 +3,7 @@ package com.keycap.keycapdesign.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.keycap.keycapdesign.exception.BadRequestException;
+import com.keycap.keycapdesign.exception.ExternalServiceException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,7 +28,16 @@ public class CloudinaryService {
             ));
         } catch (IOException e) {
             throw new BadRequestException("Upload failed");
+        } catch (RuntimeException e) {
+            throw new ExternalServiceException(toCloudinaryErrorMessage(e), e);
         }
     }
-}
 
+    private String toCloudinaryErrorMessage(RuntimeException e) {
+        String message = e.getMessage();
+        if (message != null && message.toLowerCase().contains("invalid cloud_name")) {
+            return "Invalid Cloudinary cloud name. Check cloudinary.cloud-name in backend configuration.";
+        }
+        return "Cloudinary upload failed. Check backend Cloudinary configuration.";
+    }
+}

@@ -10,17 +10,19 @@ public class ConversationResponse {
     private String customerName;
     private Long staffId;
     private String staffName;
+    private Long orderId;
     private ConversationStatus status;
     private long unreadCount;
     private LocalDateTime createdAt;
 
     public ConversationResponse(Long id, Long customerId, String customerName, Long staffId, String staffName,
-                                ConversationStatus status, long unreadCount, LocalDateTime createdAt) {
+                                Long orderId, ConversationStatus status, long unreadCount, LocalDateTime createdAt) {
         this.id = id;
         this.customerId = customerId;
         this.customerName = customerName;
         this.staffId = staffId;
         this.staffName = staffName;
+        this.orderId = orderId;
         this.status = status;
         this.unreadCount = unreadCount;
         this.createdAt = createdAt;
@@ -44,6 +46,10 @@ public class ConversationResponse {
 
     public String getStaffName() {
         return staffName;
+    }
+
+    public Long getOrderId() {
+        return orderId;
     }
 
     public ConversationStatus getStatus() {

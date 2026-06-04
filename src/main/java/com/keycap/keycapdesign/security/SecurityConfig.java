@@ -2,6 +2,7 @@ package com.keycap.keycapdesign.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -37,7 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/verify",
-                                "/api/auth/resend")
+                                "/api/auth/resend", "/api/auth/forgot-password", "/api/auth/reset-password")
                         .permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
@@ -47,6 +48,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/payments/payos/webhook").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
+                .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
+                        (request, response, authException) -> response.sendError(HttpStatus.UNAUTHORIZED.value()),
+                        request -> request.getRequestURI().startsWith("/api/")))
                 .httpBasic(Customizer.withDefaults());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
