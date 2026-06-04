@@ -6,6 +6,7 @@ import com.keycap.keycapdesign.dto.ticket.TicketStatusUpdateRequest;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.entity.Order;
+import com.keycap.keycapdesign.enums.OrderStatus;
 import com.keycap.keycapdesign.enums.Role;
 import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.BadRequestException;
@@ -56,6 +57,13 @@ public class TicketService {
     public TicketResponse assignTicket(Long id, TicketAssignRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        if (ticket.getStatus() == TicketStatus.CANCELLED) {
+            throw new BadRequestException("Cannot assign staff to a cancelled ticket");
+        }
+        Order order = orderRepository.findByTicketId(ticket.getId()).orElse(null);
+        if (order != null && order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot assign staff because the related order is cancelled");
+        }
         User staff = userRepository.findById(request.getStaffId())
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
         User admin = userRepository.findById(request.getAdminId())

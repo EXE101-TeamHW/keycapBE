@@ -82,6 +82,49 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    public ReviewResponse updateReview(Long productId, Long reviewId, ReviewRequest request) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        if (review.getUser() == null || request.getUserId() == null
+                || !review.getUser().getId().equals(request.getUserId())) {
+            throw new BadRequestException("You can only update your own review");
+        }
+
+        if (review.getProduct() == null || !review.getProduct().getId().equals(productId)) {
+            throw new BadRequestException("Review does not belong to this product");
+        }
+
+        if (request.getRating() == null && request.getComment() == null) {
+            throw new BadRequestException("No review fields to update");
+        }
+
+        if (request.getRating() != null) {
+            review.setRating(request.getRating());
+        }
+        if (request.getComment() != null) {
+            review.setComment(request.getComment());
+        }
+
+        reviewRepository.save(review);
+        return toResponse(review);
+    }
+
+    public void deleteReview(Long productId, Long reviewId, Long userId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        if (review.getUser() == null || userId == null || !review.getUser().getId().equals(userId)) {
+            throw new BadRequestException("You can only delete your own review");
+        }
+
+        if (review.getProduct() == null || !review.getProduct().getId().equals(productId)) {
+            throw new BadRequestException("Review does not belong to this product");
+        }
+
+        reviewRepository.delete(review);
+    }
+
     private ReviewResponse toResponse(Review review) {
         String userName = review.getUser() != null ? 
             (review.getUser().getFullName() != null ? review.getUser().getFullName() : review.getUser().getEmail()) : "Unknown User";
