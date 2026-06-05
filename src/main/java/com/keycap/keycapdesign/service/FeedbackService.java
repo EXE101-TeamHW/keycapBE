@@ -7,6 +7,7 @@ import com.keycap.keycapdesign.entity.MockupFeedback;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.FeedbackType;
+import com.keycap.keycapdesign.enums.MockupStatus;
 import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
@@ -15,6 +16,7 @@ import com.keycap.keycapdesign.repository.MockupRepository;
 import com.keycap.keycapdesign.repository.TicketRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,7 +30,8 @@ public class FeedbackService {
     private final TicketService ticketService;
 
     public FeedbackService(MockupFeedbackRepository feedbackRepository, MockupRepository mockupRepository,
-                           TicketRepository ticketRepository, UserRepository userRepository, TicketService ticketService) {
+                           TicketRepository ticketRepository, UserRepository userRepository,
+                           TicketService ticketService) {
         this.feedbackRepository = feedbackRepository;
         this.mockupRepository = mockupRepository;
         this.ticketRepository = ticketRepository;
@@ -36,6 +39,7 @@ public class FeedbackService {
         this.ticketService = ticketService;
     }
 
+    @Transactional
     public MockupFeedbackResponse create(Long ticketId, Long mockupId, MockupFeedbackRequest request) {
         Mockup mockup = mockupRepository.findById(mockupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mockup not found"));
@@ -57,6 +61,8 @@ public class FeedbackService {
             if (ticket.getRevisionCount() >= ticket.getMaxRevisions()) {
                 throw new BadRequestException("Max revisions reached");
             }
+            mockup.setStatus(MockupStatus.REJECTED);
+            mockupRepository.save(mockup);
             ticket.setRevisionCount(ticket.getRevisionCount() + 1);
             TicketStatus oldStatus = ticket.getStatus();
             ticket.setStatus(TicketStatus.DESIGNING);
@@ -64,6 +70,8 @@ public class FeedbackService {
             ticketRepository.save(ticket);
             ticketService.broadcastTicketUpdate(ticket);
         } else if (request.getType() == FeedbackType.APPROVED) {
+            mockup.setStatus(MockupStatus.APPROVED);
+            mockupRepository.save(mockup);
             ticket.setStatus(TicketStatus.APPROVED);
             ticketRepository.save(ticket);
             ticketService.broadcastTicketUpdate(ticket);

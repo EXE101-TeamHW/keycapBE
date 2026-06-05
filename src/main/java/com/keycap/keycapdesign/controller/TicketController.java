@@ -5,13 +5,16 @@ import com.keycap.keycapdesign.dto.feedback.MockupFeedbackRequest;
 import com.keycap.keycapdesign.dto.feedback.MockupFeedbackResponse;
 import com.keycap.keycapdesign.dto.mockup.MockupCreateRequest;
 import com.keycap.keycapdesign.dto.mockup.MockupResponse;
+import com.keycap.keycapdesign.dto.order.OrderResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketAssignRequest;
+import com.keycap.keycapdesign.dto.ticket.TicketQuotePriceRequest;
 import com.keycap.keycapdesign.dto.ticket.TicketResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketStatusUpdateRequest;
 import com.keycap.keycapdesign.enums.Role;
 import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.FeedbackService;
 import com.keycap.keycapdesign.service.MockupService;
+import com.keycap.keycapdesign.service.OrderService;
 import com.keycap.keycapdesign.service.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,13 +37,15 @@ public class TicketController {
     private final MockupService mockupService;
     private final FeedbackService feedbackService;
     private final CurrentUserService currentUserService;
+    private final OrderService orderService;
 
     public TicketController(TicketService ticketService, MockupService mockupService, FeedbackService feedbackService,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService, OrderService orderService) {
         this.ticketService = ticketService;
         this.mockupService = mockupService;
         this.feedbackService = feedbackService;
         this.currentUserService = currentUserService;
+        this.orderService = orderService;
     }
 
     @GetMapping
@@ -76,6 +81,19 @@ public class TicketController {
     public ApiResponse<TicketResponse> updateStatus(@PathVariable Long id,
             @Valid @RequestBody TicketStatusUpdateRequest request) {
         return ApiResponse.success(ticketService.updateStatus(id, request));
+    }
+
+    @PutMapping("/{id}/quote-price")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public ApiResponse<TicketResponse> updateQuotePrice(@PathVariable Long id,
+            @Valid @RequestBody TicketQuotePriceRequest request) {
+        return ApiResponse.success(ticketService.updateQuotedPrice(id, request.getQuotedPrice()));
+    }
+
+    @PostMapping("/{id}/create-order")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public ApiResponse<OrderResponse> createCustomOrder(@PathVariable Long id) {
+        return ApiResponse.success(orderService.createCustomOrderFromTicket(id, currentUserService.getCurrentUser()));
     }
 
     @PostMapping("/{id}/mockups")

@@ -11,7 +11,10 @@ import com.keycap.keycapdesign.entity.Product;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.OrderStatus;
+import com.keycap.keycapdesign.enums.OrderType;
+import com.keycap.keycapdesign.enums.PaymentStatus;
 import com.keycap.keycapdesign.enums.Role;
+import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.repository.ConversationRepository;
@@ -23,6 +26,9 @@ import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +39,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
@@ -42,13 +50,15 @@ public class OrderService {
     private final ConversationService conversationService;
     private final SimpMessagingTemplate messagingTemplate;
     private final TicketService ticketService;
+    private final EmailService emailService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
                         TicketRepository ticketRepository, ConversationRepository conversationRepository,
                         @Lazy ConversationService conversationService,
                         SimpMessagingTemplate messagingTemplate,
-                        TicketService ticketService) {
+                        TicketService ticketService,
+                        EmailService emailService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
@@ -58,8 +68,10 @@ public class OrderService {
         this.conversationService = conversationService;
         this.messagingTemplate = messagingTemplate;
         this.ticketService = ticketService;
+        this.emailService = emailService;
     }
 
+    @Transactional
     public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -67,6 +79,11 @@ public class OrderService {
         if (request.getTicketId() != null) {
             ticket = ticketRepository.findById(request.getTicketId())
                     .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        }
+
+        if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM
+                && (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(10000)) < 0)) {
+            throw new BadRequestException("Tiền cọc tối thiểu cho đơn custom là 10.000đ");
         }
 
         Order order = new Order();
@@ -81,16 +98,14 @@ public class OrderService {
         if (request.getType() == com.keycap.keycapdesign.enums.OrderType.SHOP) {
             setOrderDeliveryDeadline(order);
         }
-        orderRepository.save(order);
 
         BigDecimal total = BigDecimal.ZERO;
         
         if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM) {
-            if (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(10000)) < 0) {
-                throw new BadRequestException("Custom order minimum deposit amount is 10,000 VND");
-            }
             total = request.getTotalAmount();
+            orderRepository.save(order);
         } else {
+            orderRepository.save(order);
             for (OrderItemRequest itemRequest : request.getItems()) {
                 Product product = productRepository.findById(itemRequest.getProductId())
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -152,6 +167,78 @@ public class OrderService {
                 .filter(o -> o.getAssignedStaff() != null && o.getAssignedStaff().getId().equals(staffId))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderResponse createCustomOrderFromTicket(Long ticketId, User actor) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        if (actor != null && actor.getRole() == Role.STAFF) {
+            if (ticket.getAssignedStaff() == null || !ticket.getAssignedStaff().getId().equals(actor.getId())) {
+                throw new BadRequestException("Only the assigned staff can create this custom order");
+            }
+        }
+        if (ticket.getStatus() != TicketStatus.IN_PRODUCTION && ticket.getStatus() != TicketStatus.COMPLETED) {
+            throw new BadRequestException("Ticket must be in production before creating the custom order");
+        }
+
+        OrderResponse response = activateCustomOrder(ticket);
+        if (ticket.getStatus() != TicketStatus.COMPLETED) {
+            ticket.setStatus(TicketStatus.COMPLETED);
+            ticketRepository.save(ticket);
+            ticketService.broadcastTicketUpdate(ticket);
+        }
+        return response;
+    }
+
+    private OrderResponse activateCustomOrder(Ticket ticket) {
+        if (ticket == null || ticket.getId() == null) {
+            throw new BadRequestException("Ticket is required to activate custom order");
+        }
+        Order order = orderRepository.findByTicketId(ticket.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Custom order not found for ticket"));
+        if (order.getType() != OrderType.CUSTOM) {
+            throw new BadRequestException("Related order is not a custom order");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED
+                || order.getPaymentStatus() == PaymentStatus.CANCELLED
+                || order.getPaymentStatus() == PaymentStatus.REFUNDED) {
+            throw new BadRequestException("Cannot activate a cancelled or refunded custom order");
+        }
+        if (ticket.getQuotedPrice() == null || ticket.getQuotedPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Staff must update the custom price before customer approval");
+        }
+        if (ticket.getAssignedStaff() == null) {
+            throw new BadRequestException("Ticket must have assigned staff before customer approval");
+        }
+
+        order.setTotalAmount(ticket.getQuotedPrice());
+        order.setAssignedStaff(ticket.getAssignedStaff());
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.setStatus(OrderStatus.CONFIRMED);
+        }
+        if (isBlank(order.getShippingAddress())) {
+            order.setShippingAddress(extractShippingAddressFromTicket(ticket));
+        }
+        if (order.getDeliveryDeadline() == null) {
+            setOrderDeliveryDeadline(order);
+            if (order.getDeliveryDeadline() == null) {
+                order.setDeliveryDeadline(LocalDate.now().plusDays(7));
+            }
+        }
+
+        orderRepository.save(order);
+        conversationService.getOrCreateConversationForOrder(
+                order.getUser().getId(), ticket.getAssignedStaff().getId(), order.getId());
+
+        OrderResponse response = toResponse(order);
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        try {
+            emailService.sendCustomOrderCreated(order);
+        } catch (Exception e) {
+            log.warn("Failed to send custom order email for order {}", order.getId(), e);
+        }
+        return response;
     }
 
     public OrderResponse getOrder(Long id) {
@@ -299,7 +386,13 @@ public class OrderService {
                 }
             }
             order.setStatus(OrderStatus.CANCELLED);
+            if (isUnpaid(order)) {
+                order.setPaymentStatus(PaymentStatus.CANCELLED);
+            }
             restoreStock(order);
+            orderRepository.save(order);
+        } else if (isUnpaid(order)) {
+            order.setPaymentStatus(PaymentStatus.CANCELLED);
             orderRepository.save(order);
         }
         OrderResponse response = toResponse(order);
@@ -330,6 +423,11 @@ public class OrderService {
                 }
             }
         }
+    }
+
+    private boolean isUnpaid(Order order) {
+        return order.getPaymentStatus() != PaymentStatus.PAID
+                && order.getPaymentStatus() != PaymentStatus.REFUNDED;
     }
 
     private OrderResponse toResponse(Order order) {
@@ -373,6 +471,27 @@ public class OrderService {
                 order.setDeliveryDeadline(LocalDate.now().plusDays(7));
             }
         }
+    }
+
+    private String extractShippingAddressFromTicket(Ticket ticket) {
+        if (ticket.getRequest() == null || isBlank(ticket.getRequest().getNotes())) {
+            return null;
+        }
+        String[] lines = ticket.getRequest().getNotes().split("\\R");
+        for (String line : lines) {
+            String trimmed = line == null ? "" : line.trim();
+            String normalized = java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "")
+                    .toLowerCase();
+            if (normalized.startsWith("dia chi:")) {
+                return trimmed.substring(trimmed.indexOf(":") + 1).trim();
+            }
+        }
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private String generateOrderCode() {

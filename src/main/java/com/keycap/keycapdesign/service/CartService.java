@@ -10,6 +10,7 @@ import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.repository.CartItemRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
+import com.keycap.keycapdesign.util.JsonUtil;
 import org.springframework.stereotype.Service;
 import vn.payos.exception.UnauthorizedException;
 
@@ -87,8 +88,11 @@ public class CartService {
     }
 
     private CartItemResponse toResponse(CartItem item) {
+        Product product = item.getProduct();
+        List<String> images = JsonUtil.fromJson(product.getImagesJson());
+        String productImage = images.isEmpty() ? null : images.get(0);
         return new CartItemResponse(item.getId(), item.getProduct().getId(), item.getProduct().getName(),
-                item.getQuantity(), item.getProduct().getPrice());
+                productImage, item.getQuantity(), item.getProduct().getPrice(), item.getProduct().getStockQuantity());
     }
 
     public void clearCart(Long userId) {
