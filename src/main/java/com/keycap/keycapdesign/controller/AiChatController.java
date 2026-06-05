@@ -24,7 +24,7 @@ public class AiChatController {
     }
 
     @PostMapping("/chat")
-   @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<AiChatResponse> chat(@Valid @RequestBody AiChatRequest request) {
         Long userId = currentUserService.getCurrentUserId();
         return ApiResponse.success(aiChatService.chat(request, userId));
