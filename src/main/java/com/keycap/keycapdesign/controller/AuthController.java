@@ -68,7 +68,7 @@ public class AuthController {
     }
 
     /**
-     * PUT /api/auth/profile/{userId} - Customer cập nhật thông tin cá nhân
+     * PUT /api/auth/profile - Customer cập nhật thông tin cá nhân
      */
     @PutMapping("/profile")
     public ApiResponse<UserResponse> updateProfile(

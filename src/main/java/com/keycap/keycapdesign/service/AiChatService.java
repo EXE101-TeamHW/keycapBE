@@ -183,7 +183,8 @@ public class AiChatService {
 
         ProductIntent intent = ProductIntent.from(request);
         List<ProductMatch> candidates = selectCandidateProducts(intent);
-        List<AiRecommendation> recommendations = buildRecommendations(candidates, intent, request.getMaxRecommendations());
+        List<AiRecommendation> recommendations = buildRecommendations(candidates, intent,
+                request.getMaxRecommendations());
         List<String> followUpQuestions = buildFollowUpQuestions(intent, recommendations);
 
         boolean providerAvailable = hasProviderConfig();
@@ -486,11 +487,13 @@ public class AiChatService {
     private String buildPrompt(String userMessage, List<Message> recent, List<AiRecommendation> recommendations,
             ProductIntent intent, String faqContent) {
         StringBuilder builder = new StringBuilder();
-        builder.append("Bạn là trợ lý AI của shop keycap/keyboard. ")
+        builder.append(
+                "Bạn là trợ lý AI của HW Shop - Góc Phím Cơ & Keycap Độc Bản, chuyên cung cấp các dịch vụ, sản phẩm liên quan đến keycap và keyboard, custome bán phím cơ. ")
                 .append("Chỉ trả lời trong phạm vi keycap, keyboard, switch, layout, key profile, giá, dịch vụ custom và đặt hàng. ")
                 .append("Luôn trả lời bằng tiếng Việt có dấu, tự nhiên, thân thiện và đúng chính tả. ")
                 .append("Không bịa giá ngoài dữ liệu sản phẩm/FAQ. Nếu thiếu thông tin thì hỏi lại 1-2 câu ngắn. ")
-                .append("Có thể đề xuất combo keycap + switch + layout nếu hợp lý.\n\n");
+                .append("Có thể đề xuất combo keycap + switch + layout nếu hợp lý.\n\n")
+                .append("Nếu có câu hỏi hay yêu cầu nào ngoài phạm vi trên như yêu cầu viết code, thông tin nội bộ, hay cung cấp thông tin nào ngoài scope thì hãy từ chối.");
 
         builder.append("Yêu cầu hiện tại:\n").append(userMessage).append("\n\n");
         builder.append("Thông tin đã suy luận:\n")
