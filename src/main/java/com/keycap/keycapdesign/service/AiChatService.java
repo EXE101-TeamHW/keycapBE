@@ -68,6 +68,7 @@ public class AiChatService {
     private static final int MAX_CANDIDATE_PRODUCTS = 12;
     private static final int MAX_FAQ_CHARS = 12000;
     private static final int MAX_LOCAL_REPLY_ITEMS = 3;
+    private static final int MAX_FOLLOW_UP_QUESTIONS = 2;
     private static final List<String> KNOWLEDGE_FILES = List.of("classpath:ai/faq.txt", "classpath:ai/data.md");
     private static final Pattern PRICE_PATTERN = Pattern.compile(
             "(\\d+(?:[\\.,]\\d+)?)\\s*(trieu|tr|m|k|nghin|ngan)?",
@@ -181,11 +182,11 @@ public class AiChatService {
                     List.of("Bạn đang tìm keycap cho layout nào?"), hasProviderConfig());
         }
 
-        ProductIntent intent = ProductIntent.from(request);
+        ProductIntent intent = ProductIntent.from(request, recent, userId);
         List<ProductMatch> candidates = selectCandidateProducts(intent);
         List<AiRecommendation> recommendations = buildRecommendations(candidates, intent,
                 request.getMaxRecommendations());
-        List<String> followUpQuestions = buildFollowUpQuestions(intent, recommendations);
+        List<String> followUpQuestions = buildProfessionalFollowUpQuestions(intent, recommendations);
 
         boolean providerAvailable = hasProviderConfig();
         String providerError = null;
@@ -409,6 +410,54 @@ public class AiChatService {
         return "Phù hợp vì " + String.join(", ", reasons);
     }
 
+    private List<String> buildProfessionalFollowUpQuestions(ProductIntent intent,
+            List<AiRecommendation> recommendations) {
+        List<String> questions = new ArrayList<>();
+
+        if (intent.wantsCustomDesign()) {
+            if (intent.layouts().isEmpty()) {
+                questions.add("Bạn muốn custom keycap cho layout nào: 60%, 65%, 75%, TKL hay full-size?");
+            }
+            if (!intent.hasThemePreference()) {
+                questions.add("Bạn muốn concept/theme custom theo phong cách nào: tối giản, retro, pastel, dark hay theo ảnh reference?");
+            }
+            if (!intent.hasBudget()) {
+                questions.add("Ngân sách dự kiến cho bản custom là bao nhiêu để mình tư vấn độ phức tạp thiết kế phù hợp?");
+            }
+            return questions.stream().limit(MAX_FOLLOW_UP_QUESTIONS).collect(Collectors.toList());
+        }
+
+        if (!intent.hasPurpose()) {
+            questions.add("Bạn dùng bàn phím chủ yếu để làm gì: văn phòng, gaming, code, viết lách hay học tập?");
+        }
+        if (intent.layouts().isEmpty()) {
+            questions.add("Bạn đang dùng layout nào: 60%, 65%, 75%, TKL hay full-size?");
+        }
+        if (intent.profiles().isEmpty() && intent.needsProfileAdvice()) {
+            questions.add("Bạn thích profile dễ gõ hằng ngày như Cherry/OEM, hay profile cao và đã tay hơn như SA/XDA/MT3?");
+        }
+        if (!intent.hasSwitchPreference() && intent.shouldAskSwitchPreference()) {
+            questions.add("Bạn ưu tiên switch thật yên tĩnh, linear mượt, hay tactile có khấc nhẹ để gõ rõ tay hơn?");
+        }
+        if (!intent.hasSoundPreference() && intent.shouldAskSoundPreference()) {
+            questions.add("Bạn muốn âm thanh thật êm trong văn phòng hay vẫn muốn có chút thocky/creamy khi gõ?");
+        }
+        if (!intent.hasBudget()) {
+            questions.add("Ngân sách dự kiến của bạn là bao nhiêu để mình lọc đúng tầm giá?");
+        }
+        if (recommendations.isEmpty() && !intent.hasThemePreference() && questions.size() < MAX_FOLLOW_UP_QUESTIONS) {
+            questions.add("Bạn thích tone màu hoặc theme nào để mình định hướng keycap sát gu hơn?");
+        }
+        if (questions.isEmpty() && recommendations.isEmpty()) {
+            questions.add("Bạn muốn mình tư vấn theo cấu hình custom lý tưởng, hay chỉ lọc những sản phẩm đang có sẵn trong kho?");
+        }
+        if (questions.isEmpty()) {
+            questions.add("Bạn muốn mình so sánh 2-3 lựa chọn phù hợp nhất hay chốt một mẫu đáng mua nhất theo nhu cầu này?");
+        }
+
+        return questions.stream().limit(MAX_FOLLOW_UP_QUESTIONS).collect(Collectors.toList());
+    }
+
     private List<String> buildFollowUpQuestions(ProductIntent intent, List<AiRecommendation> recommendations) {
         List<String> questions = new ArrayList<>();
         if (intent.layouts().isEmpty()) {
@@ -420,7 +469,7 @@ public class AiChatService {
         if (!intent.hasBudget()) {
             questions.add("Ngân sách dự kiến của bạn là bao nhiêu?");
         }
-        if (recommendations.isEmpty()) {
+        if (recommendations.isEmpty() && !intent.hasThemeOrSwitchPreference()) {
             questions.add("Bạn có thể mô tả thêm về màu sắc, theme hoặc switch đang dùng không?");
         }
         return questions.stream().limit(3).collect(Collectors.toList());
@@ -734,8 +783,8 @@ public class AiChatService {
             Set<LayoutType> layouts, Set<KeyProfile> profiles, BigDecimal minBudget, BigDecimal maxBudget,
             boolean wantsPriceInfo, boolean wantsServiceInfo, boolean wantsCustomDesign) {
 
-        static ProductIntent from(AiChatRequest request) {
-            String normalized = normalizeStatic(request.getMessage());
+        static ProductIntent from(AiChatRequest request, List<Message> recent, Long customerId) {
+            String normalized = normalizeStatic(buildCustomerContext(request, recent, customerId));
             Set<ProductTheme> themes = detectThemes(normalized);
             Set<LayoutType> layouts = detectLayouts(normalized);
             Set<KeyProfile> profiles = detectProfiles(normalized);
@@ -753,8 +802,72 @@ public class AiChatService {
                     containsAny(normalized, "custom", "thiet ke", "design", "reference", "mockup"));
         }
 
+        private static String buildCustomerContext(AiChatRequest request, List<Message> recent, Long customerId) {
+            StringBuilder builder = new StringBuilder();
+            if (recent != null) {
+                for (Message message : recent) {
+                    if (message == null || message.getContent() == null || message.getContent().isBlank()) {
+                        continue;
+                    }
+                    Long senderId = message.getSender() == null ? null : message.getSender().getId();
+                    if (customerId != null && Objects.equals(senderId, customerId)) {
+                        builder.append(message.getContent()).append("\n");
+                    }
+                }
+            }
+            if (builder.isEmpty() && request != null && request.getMessage() != null) {
+                builder.append(request.getMessage());
+            }
+            return builder.toString();
+        }
+
         boolean hasBudget() {
             return minBudget != null || maxBudget != null;
+        }
+
+        boolean hasPurpose() {
+            return containsAny(normalizedMessage, "van phong", "office", "gaming", "game", "code", "lap trinh",
+                    "dev", "viet", "viet lach", "hoc", "hoc tap", "sinh vien", "nhap lieu", "ke toan");
+        }
+
+        boolean hasThemePreference() {
+            return !themes.isEmpty()
+                    || containsAny(normalizedMessage, "mau", "theme", "sang", "toi", "dark", "light", "retro",
+                            "pastel", "minimal", "colorful", "rgb", "beige", "trang", "den", "xam", "hong",
+                            "xanh", "reference", "anh mau");
+        }
+
+        boolean hasSwitchPreference() {
+            return containsAny(normalizedMessage, "switch", "linear", "tactile", "clicky", "silent", "red",
+                    "yellow", "brown", "blue", "black", "cream", "boba", "gateron", "akko",
+                    "switch nao cung duoc", "nao cung duoc");
+        }
+
+        boolean hasSoundPreference() {
+            return containsAny(normalizedMessage, "em", "yen tinh", "im lang", "it on", "khong on", "thocky",
+                    "clacky", "creamy", "poppy", "am thanh", "tieng", "go phe", "go suong");
+        }
+
+        boolean needsProfileAdvice() {
+            return containsAny(normalizedMessage, "keycap", "profile", "layout", "ban phim", "phim co", "custom")
+                    || !layouts.isEmpty() || !themes.isEmpty();
+        }
+
+        boolean shouldAskSwitchPreference() {
+            return containsAny(normalizedMessage, "switch", "ban phim", "phim co", "gaming", "game", "van phong",
+                    "code", "lap trinh", "go", "em", "yen tinh", "thocky", "custom");
+        }
+
+        boolean shouldAskSoundPreference() {
+            return containsAny(normalizedMessage, "van phong", "office", "em", "yen tinh", "it on", "khong on",
+                    "thocky", "clacky", "creamy", "go phe", "go suong");
+        }
+
+        boolean hasThemeOrSwitchPreference() {
+            return !themes.isEmpty()
+                    || containsAny(normalizedMessage, "mau", "theme", "sang", "toi", "dark", "light", "retro",
+                            "pastel", "minimal", "colorful", "rgb", "switch", "linear", "tactile", "clicky",
+                            "silent", "em", "yen tinh", "thocky", "clacky", "creamy");
         }
 
         boolean isBroadAdvice() {
