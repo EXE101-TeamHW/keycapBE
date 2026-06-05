@@ -11,6 +11,7 @@ import com.keycap.keycapdesign.entity.Product;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.OrderStatus;
+import com.keycap.keycapdesign.enums.PaymentStatus;
 import com.keycap.keycapdesign.enums.Role;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
@@ -23,6 +24,7 @@ import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -60,6 +62,7 @@ public class OrderService {
         this.ticketService = ticketService;
     }
 
+    @Transactional
     public OrderResponse createOrder(OrderCreateRequest request, CartService cartService) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -67,6 +70,11 @@ public class OrderService {
         if (request.getTicketId() != null) {
             ticket = ticketRepository.findById(request.getTicketId())
                     .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        }
+
+        if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM
+                && (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(10000)) < 0)) {
+            throw new BadRequestException("Tiền cọc tối thiểu cho đơn custom là 10.000đ");
         }
 
         Order order = new Order();
@@ -81,16 +89,14 @@ public class OrderService {
         if (request.getType() == com.keycap.keycapdesign.enums.OrderType.SHOP) {
             setOrderDeliveryDeadline(order);
         }
-        orderRepository.save(order);
 
         BigDecimal total = BigDecimal.ZERO;
         
         if (request.getType() == com.keycap.keycapdesign.enums.OrderType.CUSTOM) {
-            if (request.getTotalAmount() == null || request.getTotalAmount().compareTo(BigDecimal.valueOf(10000)) < 0) {
-                throw new BadRequestException("Custom order minimum deposit amount is 10,000 VND");
-            }
             total = request.getTotalAmount();
+            orderRepository.save(order);
         } else {
+            orderRepository.save(order);
             for (OrderItemRequest itemRequest : request.getItems()) {
                 Product product = productRepository.findById(itemRequest.getProductId())
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -299,7 +305,13 @@ public class OrderService {
                 }
             }
             order.setStatus(OrderStatus.CANCELLED);
+            if (isUnpaid(order)) {
+                order.setPaymentStatus(PaymentStatus.CANCELLED);
+            }
             restoreStock(order);
+            orderRepository.save(order);
+        } else if (isUnpaid(order)) {
+            order.setPaymentStatus(PaymentStatus.CANCELLED);
             orderRepository.save(order);
         }
         OrderResponse response = toResponse(order);
@@ -330,6 +342,11 @@ public class OrderService {
                 }
             }
         }
+    }
+
+    private boolean isUnpaid(Order order) {
+        return order.getPaymentStatus() != PaymentStatus.PAID
+                && order.getPaymentStatus() != PaymentStatus.REFUNDED;
     }
 
     private OrderResponse toResponse(Order order) {

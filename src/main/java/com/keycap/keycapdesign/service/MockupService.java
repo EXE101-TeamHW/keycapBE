@@ -5,6 +5,7 @@ import com.keycap.keycapdesign.dto.mockup.MockupResponse;
 import com.keycap.keycapdesign.entity.Mockup;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
+import com.keycap.keycapdesign.enums.MockupStatus;
 import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.repository.MockupRepository;
@@ -42,6 +43,7 @@ public class MockupService {
         mockup.setDescription(request.getDescription());
         mockup.setCreatedBy(createdBy);
         mockup.setVersion(mockupRepository.findByTicketId(ticketId).size() + 1);
+        mockup.setStatus(MockupStatus.SENT);
         mockupRepository.save(mockup);
         ticket.setStatus(TicketStatus.AWAITING_APPROVAL);
         ticketRepository.save(ticket);

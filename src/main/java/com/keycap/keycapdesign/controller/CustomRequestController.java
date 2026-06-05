@@ -1,8 +1,10 @@
 package com.keycap.keycapdesign.controller;
 
 import com.keycap.keycapdesign.common.ApiResponse;
+import com.keycap.keycapdesign.dto.custom.CustomCheckoutRequest;
 import com.keycap.keycapdesign.dto.custom.CustomRequestCreateRequest;
 import com.keycap.keycapdesign.dto.custom.CustomRequestResponse;
+import com.keycap.keycapdesign.dto.payment.PaymentUrlResponse;
 import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.CustomRequestService;
 import jakarta.validation.Valid;
@@ -33,6 +35,12 @@ public class CustomRequestController {
     public ApiResponse<CustomRequestResponse> create(@Valid @RequestBody CustomRequestCreateRequest request) {
         request.setUserId(currentUserService.getCurrentUserId());
         return ApiResponse.success(customRequestService.create(request));
+    }
+
+    @PostMapping("/checkout")
+    public ApiResponse<PaymentUrlResponse> checkout(@Valid @RequestBody CustomCheckoutRequest request) {
+        request.setUserId(currentUserService.getCurrentUserId());
+        return ApiResponse.success(customRequestService.createCheckout(request));
     }
 
     @GetMapping

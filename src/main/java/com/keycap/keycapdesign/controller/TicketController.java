@@ -6,6 +6,7 @@ import com.keycap.keycapdesign.dto.feedback.MockupFeedbackResponse;
 import com.keycap.keycapdesign.dto.mockup.MockupCreateRequest;
 import com.keycap.keycapdesign.dto.mockup.MockupResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketAssignRequest;
+import com.keycap.keycapdesign.dto.ticket.TicketQuotePriceRequest;
 import com.keycap.keycapdesign.dto.ticket.TicketResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketStatusUpdateRequest;
 import com.keycap.keycapdesign.enums.Role;
@@ -76,6 +77,13 @@ public class TicketController {
     public ApiResponse<TicketResponse> updateStatus(@PathVariable Long id,
             @Valid @RequestBody TicketStatusUpdateRequest request) {
         return ApiResponse.success(ticketService.updateStatus(id, request));
+    }
+
+    @PutMapping("/{id}/quote-price")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public ApiResponse<TicketResponse> updateQuotePrice(@PathVariable Long id,
+            @Valid @RequestBody TicketQuotePriceRequest request) {
+        return ApiResponse.success(ticketService.updateQuotedPrice(id, request.getQuotedPrice()));
     }
 
     @PostMapping("/{id}/mockups")

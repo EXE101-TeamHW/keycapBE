@@ -16,6 +16,7 @@ import com.keycap.keycapdesign.repository.UserRepository;
 import com.keycap.keycapdesign.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,13 +38,13 @@ public class TicketService {
     }
 
     public List<TicketResponse> listTickets() {
-        return ticketRepository.findAll().stream()
+        return ticketRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public List<TicketResponse> listByUser(Long userId) {
-        return ticketRepository.findByRequestUserId(userId).stream()
+        return ticketRepository.findByRequestUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -92,6 +93,26 @@ public class TicketService {
         TicketStatus newStatus = request.getStatus();
         ticket.setStatus(newStatus);
         updateDeadlineForStatus(ticket, oldStatus, newStatus);
+        ticketRepository.save(ticket);
+        broadcastTicketUpdate(ticket);
+        return toResponse(ticket);
+    }
+
+    public TicketResponse updateQuotedPrice(Long id, BigDecimal quotedPrice) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        if (ticket.getStatus() == TicketStatus.CANCELLED) {
+            throw new BadRequestException("Cannot update price for a cancelled ticket");
+        }
+        Order order = orderRepository.findByTicketId(ticket.getId()).orElse(null);
+        if (order != null && (order.getStatus() == OrderStatus.CANCELLED
+                || order.getPaymentStatus() == com.keycap.keycapdesign.enums.PaymentStatus.CANCELLED)) {
+            throw new BadRequestException("Cannot update price because the related order is cancelled");
+        }
+        if (quotedPrice == null || quotedPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Quoted price must be greater than 0");
+        }
+        ticket.setQuotedPrice(quotedPrice);
         ticketRepository.save(ticket);
         broadcastTicketUpdate(ticket);
         return toResponse(ticket);
@@ -176,6 +197,6 @@ public class TicketService {
                 ticket.getRevisionCount(), ticket.getMaxRevisions(), ticket.getStatus(), ticket.getCreatedAt(),
                 designName, refImages, customerId, customerName, customerEmail, customerPhone, assignedStaffName,
                 notes, customerBankAccount, layout, theme,
-                orderId, orderStatus, orderPaymentStatus);
+                orderId, orderStatus, orderPaymentStatus, ticket.getQuotedPrice());
     }
 }

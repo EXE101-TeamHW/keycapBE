@@ -7,6 +7,7 @@ import com.keycap.keycapdesign.entity.MockupFeedback;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.enums.FeedbackType;
+import com.keycap.keycapdesign.enums.MockupStatus;
 import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
@@ -57,6 +58,8 @@ public class FeedbackService {
             if (ticket.getRevisionCount() >= ticket.getMaxRevisions()) {
                 throw new BadRequestException("Max revisions reached");
             }
+            mockup.setStatus(MockupStatus.REJECTED);
+            mockupRepository.save(mockup);
             ticket.setRevisionCount(ticket.getRevisionCount() + 1);
             TicketStatus oldStatus = ticket.getStatus();
             ticket.setStatus(TicketStatus.DESIGNING);
@@ -64,6 +67,8 @@ public class FeedbackService {
             ticketRepository.save(ticket);
             ticketService.broadcastTicketUpdate(ticket);
         } else if (request.getType() == FeedbackType.APPROVED) {
+            mockup.setStatus(MockupStatus.APPROVED);
+            mockupRepository.save(mockup);
             ticket.setStatus(TicketStatus.APPROVED);
             ticketRepository.save(ticket);
             ticketService.broadcastTicketUpdate(ticket);

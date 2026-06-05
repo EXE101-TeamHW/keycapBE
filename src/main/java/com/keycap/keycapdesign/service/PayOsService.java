@@ -7,6 +7,7 @@ import com.keycap.keycapdesign.dto.payment.PaymentUrlResponse;
 import com.keycap.keycapdesign.entity.Order;
 import com.keycap.keycapdesign.enums.PaymentMethod;
 import com.keycap.keycapdesign.enums.PaymentStatus;
+import com.keycap.keycapdesign.enums.TicketStatus;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.repository.OrderRepository;
@@ -24,11 +25,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PayOsService {
     private static final String PAID_CODE = "00";
     private static final String PAID_STATUS = "PAID";
+    private static final String CANCELLED_STATUS = "CANCELLED";
+    private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("\\d+");
 
     @Value("${payos.client-id:}")
     private String clientId;
@@ -67,7 +72,7 @@ public class PayOsService {
                 .amount(toPayOsAmount(order.getTotalAmount()))
                 .description(toDescription(order))
                 .returnUrl(returnUrl)
-                .cancelUrl(cancelUrl)
+                .cancelUrl(toCancelUrl(order))
                 .build();
 
         try {
@@ -75,9 +80,13 @@ public class PayOsService {
             order.setPaymentMethod(PaymentMethod.PAYOS);
             order.setPaymentStatus(PaymentStatus.PENDING);
             orderRepository.save(order);
-            return new PaymentUrlResponse(response.getCheckoutUrl());
+            return new PaymentUrlResponse(response.getCheckoutUrl(), order.getId());
         } catch (PayOSException ex) {
-            throw new BadRequestException("Cannot create PayOS payment link: " + ex.getMessage());
+            String message = ex.getMessage() == null ? "" : ex.getMessage();
+            if (message.toLowerCase().contains("tồn tại") || message.toLowerCase().contains("exist")) {
+                throw new BadRequestException("Đơn thanh toán PayOS đã tồn tại. Vui lòng kiểm tra đơn hàng hoặc thử lại sau.");
+            }
+            throw new BadRequestException("Không thể tạo link thanh toán PayOS: " + message);
         }
     }
 
@@ -87,15 +96,14 @@ public class PayOsService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String status = queryParams.get("status");
-        boolean success = PAID_STATUS.equalsIgnoreCase(status);
+        boolean cancelled = isPayOsCancelled(queryParams);
+        boolean success = !cancelled && PAID_STATUS.equalsIgnoreCase(status);
         if (success && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
             order.setPaymentMethod(PaymentMethod.PAYOS);
             order.setPaymentStatus(PaymentStatus.PAID);
             orderRepository.save(order);
-        } else if (!success && "CANCELLED".equalsIgnoreCase(status) && order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
-            order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
-            orderService.restoreStock(order);
-            orderRepository.save(order);
+        } else if (cancelled && canMarkPaymentCancelled(order)) {
+            markPaymentCancelled(order);
         }
         
         return new PayOsReturnResponse(order.getId(),
@@ -130,10 +138,8 @@ public class PayOsService {
                 order.setPaymentMethod(PaymentMethod.PAYOS);
                 order.setPaymentStatus(PaymentStatus.PAID);
                 orderRepository.save(order);
-            } else if (order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.PENDING) {
-                order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
-                orderService.restoreStock(order);
-                orderRepository.save(order);
+            } else if (canMarkPaymentCancelled(order)) {
+                markPaymentCancelled(order);
             }
 
             return new PayOsWebhookResponse(order.getId(),
@@ -170,10 +176,56 @@ public class PayOsService {
         return "DH" + order.getId();
     }
 
+    private String toCancelUrl(Order order) {
+        String separator = cancelUrl.contains("?") ? "&" : "?";
+        String normalizedUrl = cancelUrl;
+        if (!normalizedUrl.contains("status=")) {
+            normalizedUrl += separator + "status=CANCELLED";
+            separator = "&";
+        }
+        if (!normalizedUrl.contains("orderCode=")) {
+            normalizedUrl += separator + "orderCode=" + order.getId();
+        }
+        return normalizedUrl;
+    }
+
     private Long parseOrderCode(String orderCode) {
         if (orderCode == null || orderCode.isBlank()) {
             throw new BadRequestException("Invalid PayOS order code");
         }
-        return Long.parseLong(orderCode);
+        Matcher matcher = ORDER_CODE_PATTERN.matcher(orderCode);
+        if (!matcher.find()) {
+            throw new BadRequestException("Invalid PayOS order code");
+        }
+        return Long.parseLong(matcher.group());
+    }
+
+    private boolean isPayOsCancelled(Map<String, String> queryParams) {
+        String status = queryParams.get("status");
+        String cancel = queryParams.get("cancel");
+        return (status != null && status.toUpperCase().contains(CANCELLED_STATUS))
+                || "true".equalsIgnoreCase(cancel)
+                || "1".equals(cancel);
+    }
+
+    private boolean canMarkPaymentCancelled(Order order) {
+        return order.getPaymentStatus() != PaymentStatus.PAID
+                && order.getPaymentStatus() != PaymentStatus.REFUNDED;
+    }
+
+    private void markPaymentCancelled(Order order) {
+        boolean wasAlreadyCancelled = order.getStatus() == com.keycap.keycapdesign.enums.OrderStatus.CANCELLED;
+        order.setStatus(com.keycap.keycapdesign.enums.OrderStatus.CANCELLED);
+        order.setPaymentStatus(PaymentStatus.CANCELLED);
+        if (!wasAlreadyCancelled) {
+            orderService.restoreStock(order);
+        }
+        if (order.getTicket() != null) {
+            order.getTicket().setStatus(TicketStatus.CANCELLED);
+            if (order.getTicket().getRequest() != null) {
+                order.getTicket().getRequest().setStatus(TicketStatus.CANCELLED);
+            }
+        }
+        orderRepository.save(order);
     }
 }
