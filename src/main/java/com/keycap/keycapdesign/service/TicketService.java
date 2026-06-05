@@ -104,6 +104,9 @@ public class TicketService {
         if (ticket.getStatus() == TicketStatus.CANCELLED) {
             throw new BadRequestException("Cannot update price for a cancelled ticket");
         }
+        if (!canUpdateQuotedPrice(ticket.getStatus())) {
+            throw new BadRequestException("Cannot update custom price after customer approval");
+        }
         Order order = orderRepository.findByTicketId(ticket.getId()).orElse(null);
         if (order != null && (order.getStatus() == OrderStatus.CANCELLED
                 || order.getPaymentStatus() == com.keycap.keycapdesign.enums.PaymentStatus.CANCELLED)) {
@@ -116,6 +119,13 @@ public class TicketService {
         ticketRepository.save(ticket);
         broadcastTicketUpdate(ticket);
         return toResponse(ticket);
+    }
+
+    private boolean canUpdateQuotedPrice(TicketStatus status) {
+        return status == TicketStatus.PENDING
+                || status == TicketStatus.IN_REVIEW
+                || status == TicketStatus.DESIGNING
+                || status == TicketStatus.AWAITING_APPROVAL;
     }
 
     public void broadcastTicketUpdate(Ticket ticket) {
