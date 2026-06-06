@@ -58,6 +58,20 @@ public class ConversationService {
             }
         }
 
+        if (request.getTicketId() != null) {
+            Long finalTicketId = request.getTicketId();
+            User finalStaff = staff;
+            return conversationRepository.findByTicketId(finalTicketId)
+                    .map(existing -> {
+                        if (existing.getStaff() == null && finalStaff != null) {
+                            existing.setStaff(finalStaff);
+                            conversationRepository.save(existing);
+                        }
+                        return toConversationResponse(existing, viewerId);
+                    })
+                    .orElseGet(() -> createConversation(customer, finalStaff, request.getOrderId(), finalTicketId, viewerId));
+        }
+
         Order order = null;
         if (request.getOrderId() != null) {
             order = orderRepository.findById(request.getOrderId())
@@ -70,55 +84,93 @@ public class ConversationService {
 
             User finalStaff = staff;
             Long finalOrderId = order.getId();
-            return conversationRepository.findByOrderId(finalOrderId)
-                    .map(existing -> {
-                        if (existing.getStaff() == null && finalStaff != null) {
-                            existing.setStaff(finalStaff);
-                            conversationRepository.save(existing);
-                        }
-                        return toConversationResponse(existing, viewerId);
-                    })
-                    .orElseGet(() -> createConversation(customer, finalStaff, finalOrderId, viewerId));
+            
+            // Check by orderId first
+            java.util.Optional<Conversation> existingOpt = conversationRepository.findByOrderId(finalOrderId);
+            if (existingOpt.isPresent()) {
+                Conversation existing = existingOpt.get();
+                if (existing.getStaff() == null && finalStaff != null) {
+                    existing.setStaff(finalStaff);
+                    conversationRepository.save(existing);
+                }
+                return toConversationResponse(existing, viewerId);
+            }
+            
+            // If order has ticket, check by ticketId
+            if (order.getTicket() != null) {
+                java.util.Optional<Conversation> byTicket = conversationRepository.findByTicketId(order.getTicket().getId());
+                if (byTicket.isPresent()) {
+                    Conversation existing = byTicket.get();
+                    existing.setOrderId(finalOrderId); // update order link
+                    if (existing.getStaff() == null && finalStaff != null) {
+                        existing.setStaff(finalStaff);
+                    }
+                    conversationRepository.save(existing);
+                    return toConversationResponse(existing, viewerId);
+                }
+            }
+
+            return createConversation(customer, finalStaff, finalOrderId, order.getTicket() != null ? order.getTicket().getId() : null, viewerId);
         }
 
-        return createConversation(customer, staff, null, viewerId);
+        return createConversation(customer, staff, null, null, viewerId);
     }
 
-    private ConversationResponse createConversation(User customer, User staff, Long orderId, Long viewerId) {
+    private ConversationResponse createConversation(User customer, User staff, Long orderId, Long ticketId, Long viewerId) {
         Conversation conversation = new Conversation();
         conversation.setCustomer(customer);
         conversation.setStaff(staff);
         conversation.setOrderId(orderId);
+        conversation.setTicketId(ticketId);
         conversation.setStatus(ConversationStatus.OPEN);
         conversationRepository.save(conversation);
         return toConversationResponse(conversation, viewerId);
     }
 
     public ConversationResponse getOrCreateConversationForOrder(Long customerId, Long staffId, Long orderId) {
-        // Reuse existing conversation for this order if any
-        return conversationRepository.findByOrderId(orderId)
-                .map(existing -> {
-                    // Update staff if changed
-                    if (staffId != null && (existing.getStaff() == null || !existing.getStaff().getId().equals(staffId))) {
-                        User newStaff = userRepository.findById(staffId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
-                        existing.setStaff(newStaff);
-                        conversationRepository.save(existing);
-                    }
-                    return toConversationResponse(existing, customerId);
-                })
-                .orElseGet(() -> {
-                    User customer = getUser(customerId);
-                    User staff = staffId != null ? userRepository.findById(staffId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Staff not found")) : null;
-                    Conversation conversation = new Conversation();
-                    conversation.setCustomer(customer);
-                    conversation.setStaff(staff);
-                    conversation.setOrderId(orderId);
-                    conversation.setStatus(ConversationStatus.OPEN);
-                    conversationRepository.save(conversation);
-                    return toConversationResponse(conversation, customerId);
-                });
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        java.util.Optional<Conversation> byOrder = conversationRepository.findByOrderId(orderId);
+        if (byOrder.isPresent()) {
+            Conversation existing = byOrder.get();
+            if (staffId != null && (existing.getStaff() == null || !existing.getStaff().getId().equals(staffId))) {
+                User newStaff = userRepository.findById(staffId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+                existing.setStaff(newStaff);
+                conversationRepository.save(existing);
+            }
+            return toConversationResponse(existing, customerId);
+        }
+
+        if (order.getTicket() != null) {
+            java.util.Optional<Conversation> byTicket = conversationRepository.findByTicketId(order.getTicket().getId());
+            if (byTicket.isPresent()) {
+                Conversation existing = byTicket.get();
+                existing.setOrderId(orderId);
+                if (staffId != null && (existing.getStaff() == null || !existing.getStaff().getId().equals(staffId))) {
+                    User newStaff = userRepository.findById(staffId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+                    existing.setStaff(newStaff);
+                }
+                conversationRepository.save(existing);
+                return toConversationResponse(existing, customerId);
+            }
+        }
+
+        User customer = getUser(customerId);
+        User staff = staffId != null ? userRepository.findById(staffId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found")) : null;
+        Conversation conversation = new Conversation();
+        conversation.setCustomer(customer);
+        conversation.setStaff(staff);
+        conversation.setOrderId(orderId);
+        if (order.getTicket() != null) {
+            conversation.setTicketId(order.getTicket().getId());
+        }
+        conversation.setStatus(ConversationStatus.OPEN);
+        conversationRepository.save(conversation);
+        return toConversationResponse(conversation, customerId);
     }
 
     public List<ConversationResponse> listConversations(Long userId) {
@@ -267,7 +319,8 @@ public class ConversationService {
                 conversation.getOrderId(),
                 conversation.getStatus(),
                 unreadCount,
-                conversation.getCreatedAt());
+                conversation.getCreatedAt(),
+                conversation.getTicketId());
     }
 
     private MessageResponse toMessageResponse(Message message) {

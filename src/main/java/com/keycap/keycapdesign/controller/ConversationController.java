@@ -41,8 +41,8 @@ public class ConversationController {
         if (currentUser.getRole() == Role.CUSTOMER) {
             request.setCustomerId(currentUser.getId());
         } else if (currentUser.getRole() == Role.STAFF) {
-            if (request.getOrderId() == null) {
-                throw new BadRequestException("orderId is required for STAFF to start a conversation");
+            if (request.getOrderId() == null && request.getTicketId() == null) {
+                throw new BadRequestException("orderId or ticketId is required for STAFF to start a conversation");
             }
             request.setStaffId(currentUser.getId());
         }

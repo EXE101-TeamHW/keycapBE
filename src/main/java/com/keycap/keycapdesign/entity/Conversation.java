@@ -30,6 +30,9 @@ public class Conversation extends BaseEntity {
     @Column(name = "order_id")
     private Long orderId;
 
+    @Column(name = "ticket_id")
+    private Long ticketId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ConversationStatus status = ConversationStatus.OPEN;

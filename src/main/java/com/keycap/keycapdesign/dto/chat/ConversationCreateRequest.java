@@ -7,6 +7,8 @@ public class ConversationCreateRequest {
 
     private Long orderId;
 
+    private Long ticketId;
+
     public Long getCustomerId() {
         return customerId;
     }
@@ -29,5 +31,13 @@ public class ConversationCreateRequest {
 
     public void setOrderId(Long orderId) {
         this.orderId = orderId;
+    }
+
+    public Long getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(Long ticketId) {
+        this.ticketId = ticketId;
     }
 }
