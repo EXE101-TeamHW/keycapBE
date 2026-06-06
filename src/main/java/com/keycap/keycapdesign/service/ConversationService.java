@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -127,6 +128,7 @@ public class ConversationService {
         return toConversationResponse(conversation, viewerId);
     }
 
+    @Transactional
     public ConversationResponse getOrCreateConversationForOrder(Long customerId, Long staffId, Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));

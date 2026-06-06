@@ -38,6 +38,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class OrderService {
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
@@ -251,6 +252,7 @@ public class OrderService {
      * Admin: PENDING → CONFIRMED only.
      * Staff: CONFIRMED → PROCESSING → SHIPPING → DELIVERED → COMPLETED.
      */
+    @Transactional
     public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request, Role actorRole) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
@@ -327,6 +329,7 @@ public class OrderService {
     /**
      * Admin assigns staff to order, confirms it (PENDING → CONFIRMED), and creates conversation.
      */
+    @Transactional
     public OrderResponse assignStaffAndConfirm(Long id, Long staffId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
@@ -355,6 +358,7 @@ public class OrderService {
         return response;
     }
 
+    @Transactional
     public OrderResponse cancelOrder(Long id, Role actorRole) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
@@ -400,6 +404,7 @@ public class OrderService {
         return response;
     }
 
+    @Transactional
     public OrderResponse refundOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
