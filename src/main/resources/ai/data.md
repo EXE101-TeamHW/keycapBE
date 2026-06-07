@@ -1285,93 +1285,88 @@ Thêm miếng foam nhỏ vào stab để giảm rattle và cải thiện sound.
 
 ## 18. CHÍNH SÁCH BÁO GIÁ, BẢO HÀNH, GIAO HÀNG
 
-> ⚠️ **Lưu ý:** Phần này cần được cửa hàng điền thông tin chính xác theo chính sách thực tế. Dưới đây là template mẫu.
+> Nguồn chính sách: đồng bộ theo trang Policies của Keycap Shop. Khi tư vấn, AI chỉ được cam kết trong phạm vi nội dung dưới đây. Nếu khách hỏi mức giá dịch vụ custom/lube/mod cụ thể chưa có trong dữ liệu, hãy nói cần staff xác nhận báo giá cuối cùng.
 
-### 18.1 Chính sách báo giá
+### 18.1 Điều khoản dịch vụ
 
-**Cách tư vấn và báo giá:**
-- Tư vấn qua: Fanpage / Zalo / Shopee / Website / Cửa hàng trực tiếp
-- Báo giá bao gồm: Giá sản phẩm + phí lắp ráp (nếu có) + phí lube (nếu có) + phí giao hàng
-- Giá niêm yết trên website/fanpage là giá tham khảo, có thể thay đổi theo thời điểm
-- Báo giá combo (bàn phím + switch + keycap) thường có giá tốt hơn mua lẻ
-- Báo giá group buy: giá cọc và giá cuối theo thông báo từng GB
-
-**Phí dịch vụ (nếu có):**
-- Lube switch: [X]K/bộ
-- Lube stab: [X]K/bộ
-- Lắp ráp hoàn chỉnh: [X]K
-- Film switch: [X]K/bộ
-- PE foam mod: [X]K
+**Khi khách truy cập và mua sắm trên website:**
+- Khách hàng đồng ý tuân thủ các điều khoản và điều kiện của Keycap Shop.
+- Shop có quyền thay đổi, chỉnh sửa hoặc cập nhật điều khoản vào bất kỳ lúc nào mà không cần thông báo trước.
+- Khách hàng cần cung cấp thông tin cá nhân chính xác như họ tên, số điện thoại và địa chỉ để phục vụ giao hàng.
+- Không sử dụng website cho mục đích gian lận, phá hoại hoặc phát tán mã độc.
+- Hình ảnh và nội dung trên website thuộc bản quyền Keycap Shop; việc sao chép cần có sự đồng ý bằng văn bản.
 
 ---
 
-### 18.2 Chính sách thanh toán
+### 18.2 Chính sách bảo mật
 
-**Thanh toán:**
-- Chuyển khoản ngân hàng
-- Tiền mặt tại cửa hàng
-- Ví điện tử (Momo, ZaloPay...)
-- COD (Ship hàng thu tiền) — áp dụng với đơn dưới [X]tr hoặc theo vùng
-
-**Đặt cọc Group Buy:**
-- Cọc [30–50]% để đảm bảo đơn hàng
-- Hoàn cọc nếu GB bị hủy
-- Không hoàn cọc nếu khách hủy sau khi GB đã chốt
+**Cam kết bảo vệ dữ liệu khách hàng:**
+- Shop chỉ thu thập thông tin cần thiết cho xử lý đơn hàng và chăm sóc khách hàng, bao gồm tên, số điện thoại, địa chỉ và email.
+- Mật khẩu và thông tin thẻ thanh toán được mã hóa.
+- Shop không lưu trữ thông tin thẻ tín dụng của khách hàng trên máy chủ.
+- Cam kết không mua bán, trao đổi hoặc chia sẻ dữ liệu khách hàng cho bên thứ ba vì mục đích thương mại.
 
 ---
 
-### 18.3 Chính sách bảo hành
+### 18.3 Chính sách thanh toán
 
-**Bàn phím prebuilt / kit:**
-- Bảo hành: [6–12] tháng tùy hãng
-- Lỗi nhà sản xuất: đổi trả miễn phí
-- Hỏng do sử dụng (đổ nước, va đập): tính phí sửa chữa
-
-**Switch:**
-- Hỏng trong [30] ngày đầu: đổi 1–1
-- Sau 30 ngày: hỗ trợ sửa/thay theo chi phí linh kiện
-
-**Keycap:**
-- Phát hiện lỗi in/defect trong vòng [7–14] ngày: đổi
-- Nứt vỡ do sử dụng: không bảo hành
-- Keycap GB: theo chính sách từng designer (thường hỗ trợ 1–1 cho lỗi sản xuất)
-
-**Không bảo hành:**
-- Hỏng do đổ nước, va đập
-- Tự tháo/mod làm hỏng
-- Hết hạn bảo hành
+**Phương thức thanh toán:**
+- Hỗ trợ thanh toán trực tuyến bằng mã QR, chuyển khoản nhanh qua thẻ ATM nội địa, Visa/Mastercard quốc tế thông qua cổng thanh toán bảo mật VNPAY hoặc PayOS.
+- Với PayOS, khách hàng thanh toán qua mã QR được cấp tự động sau khi đặt hàng.
+- Đối với đơn custom keycap riêng, khách hàng cần đặt cọc trước 50% giá trị đơn hàng để shop chuẩn bị vật liệu và sản xuất.
+- Phần còn lại của đơn custom được thanh toán khi nhận hàng.
 
 ---
 
-### 18.4 Chính sách giao hàng
+### 18.4 Chính sách bảo hành
 
-**Giao hàng nội thành (TP.HCM / Hà Nội):**
-- Giao trong ngày hoặc hôm sau
-- Phí: [X]K – [X]K
-- Miễn phí ship đơn từ [X]tr
+**Áp dụng cho sản phẩm keycap bán ra:**
+- Bảo hành 1 đổi 1 trong 30 ngày nếu phát hiện lỗi từ nhà sản xuất.
+- Các lỗi được hỗ trợ gồm: nứt, gãy stem, thiếu phím hoặc sai màu so với mô tả.
+- Bảo hành phai màu trọn đời chỉ áp dụng với keycap dùng công nghệ in Dye-sub hoặc Double-shot.
 
-**Giao hàng toàn quốc:**
-- GHTK, GHN, J&T, Viettel Post
-- Thời gian: 2–5 ngày làm việc
-- Phí: 15K – 30K tùy khu vực
-- Hàng được đóng gói bảo vệ kỹ (bubble wrap, thùng cứng)
-
-**Giao hàng quốc tế:**
-- Hỗ trợ ship theo yêu cầu
-- Giá ship tính theo trọng lượng và địa chỉ
-
-**Lưu ý:**
-- Đơn Group Buy giao hàng sau khi nhận hàng từ nhà sản xuất (thời gian tùy GB)
-- Kiểm tra hàng trước khi nhận — khiếu nại trong vòng 24h sau nhận hàng
+**Không bảo hành trong các trường hợp:**
+- Sản phẩm bị rơi vỡ, trầy xước do ngoại lực.
+- Mài mòn hoặc hư hỏng do sử dụng sai cách.
+- Tự ý dùng hóa chất tẩy rửa mạnh làm hỏng bề mặt keycap.
 
 ---
 
 ### 18.5 Chính sách đổi trả
 
-- Đổi trả trong vòng [7] ngày nếu: sản phẩm lỗi, giao nhầm, thiếu linh kiện
-- Sản phẩm phải còn nguyên vẹn, chưa lắp ráp/sử dụng (trừ trường hợp lỗi cần test)
-- Hoàn tiền trong vòng [3–5] ngày làm việc sau khi nhận lại hàng
-- Switch đã lube bởi khách không được đổi trả (trừ lỗi sản xuất rõ ràng)
+**Thời hạn và điều kiện đổi trả:**
+- Shop hỗ trợ đổi trả trong vòng 7 ngày kể từ ngày khách nhận hàng.
+- Sản phẩm phải còn nguyên vẹn, chưa qua sử dụng, không trầy xước và không dính bẩn.
+- Còn đầy đủ hộp nguyên bản, vỏ bọc và phụ kiện đi kèm như keypuller, nhãn dán hoặc switch tặng kèm nếu có.
+
+**Phí vận chuyển đổi trả:**
+- Nếu lỗi do shop, ví dụ giao sai hàng hoặc hàng lỗi, shop chịu 100% phí vận chuyển.
+- Nếu khách đổi trả do thay đổi ý định, khách chịu toàn bộ phí vận chuyển 2 chiều.
+
+---
+
+### 18.6 Chính sách vận chuyển
+
+**Phí vận chuyển:**
+- Miễn phí vận chuyển cho mọi đơn hàng từ 1.250.000đ trở lên.
+- Miễn phí vận chuyển cho các đơn đặt làm custom keycap đặc biệt.
+- Phí tiêu chuẩn toàn quốc: 30.000đ.
+- Khu vực nội thành TP.HCM hoặc khu vực lân cận chi nhánh shop: 15.000đ.
+
+**Thời gian giao hàng:**
+- Nội thành TP.HCM/Hà Nội: 1-2 ngày.
+- Các tỉnh/thành phố khác: 3-5 ngày.
+- Đơn pre-order tuân theo thời gian thông báo riêng trên trang sản phẩm.
+
+---
+
+### 18.7 Chính sách báo giá và tư vấn custom
+
+**Khi tư vấn giá cho khách:**
+- Giá sản phẩm có sẵn dựa trên giá hiển thị trên website tại thời điểm đặt hàng.
+- Với custom keycap, AI cần hỏi rõ layout, theme/concept, ảnh reference nếu có, chất liệu hoặc yêu cầu đặc biệt.
+- Báo giá custom cuối cùng cần staff xác nhận sau khi kiểm tra độ phức tạp thiết kế, vật liệu và thời gian sản xuất.
+- Không tự đưa ra phí lube, phí mod, phí thiết kế hoặc phí lắp ráp cụ thể nếu dữ liệu sản phẩm/dịch vụ chưa cung cấp con số chính thức.
 
 ---
 
@@ -1518,10 +1513,11 @@ Thêm miếng foam nhỏ vào stab để giảm rattle và cải thiện sound.
 **Q: Shop bảo hành bao lâu, giao hàng mất mấy ngày?**
 
 > "Bạn ơi:
-> - **Bảo hành:** [X] tháng cho bàn phím hoàn chỉnh, [30] ngày cho switch lỗi nhà sản xuất.
-> - **Giao nội thành:** trong ngày hoặc hôm sau.
-> - **Toàn quốc:** 2–5 ngày làm việc qua GHN/GHTK.
-> - **Đóng gói:** Hàng được wrap bubble + thùng cứng, an toàn 100%.
+> - **Bảo hành keycap:** 1 đổi 1 trong 30 ngày nếu lỗi từ nhà sản xuất như nứt, gãy stem, thiếu phím hoặc sai màu so với mô tả.
+> - **Bảo hành phai màu:** trọn đời với keycap Dye-sub hoặc Double-shot.
+> - **Giao nội thành TP.HCM/Hà Nội:** khoảng 1-2 ngày.
+> - **Tỉnh/thành khác:** khoảng 3-5 ngày.
+> - **Phí ship:** 30.000đ toàn quốc, 15.000đ nội thành TP.HCM/khu vực gần chi nhánh; miễn phí ship cho đơn từ 1.250.000đ hoặc đơn custom keycap đặc biệt.
 >
 > Bạn ở khu vực nào để mình ước tính phí ship chính xác hơn nhé?"
 
