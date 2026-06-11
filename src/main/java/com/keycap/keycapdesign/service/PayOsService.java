@@ -23,6 +23,9 @@ import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -52,10 +55,13 @@ public class PayOsService {
 
     private final OrderRepository orderRepository;
     private final OrderService orderService;
+    private final PaymentTransactionService paymentTransactionService;
 
-    public PayOsService(OrderRepository orderRepository, OrderService orderService) {
+    public PayOsService(OrderRepository orderRepository, OrderService orderService,
+            PaymentTransactionService paymentTransactionService) {
         this.orderRepository = orderRepository;
         this.orderService = orderService;
+        this.paymentTransactionService = paymentTransactionService;
     }
 
     @Transactional
@@ -102,6 +108,8 @@ public class PayOsService {
             order.setPaymentMethod(PaymentMethod.PAYOS);
             order.setPaymentStatus(PaymentStatus.PAID);
             orderRepository.save(order);
+            paymentTransactionService.recordPayment(order, order.getTotalAmount(),
+                    paymentReference(queryParams.get("id"), order), "HWSHOP qua PayOS", LocalDateTime.now(), false);
         } else if (cancelled && canMarkPaymentCancelled(order)) {
             markPaymentCancelled(order);
         }
@@ -138,6 +146,10 @@ public class PayOsService {
                 order.setPaymentMethod(PaymentMethod.PAYOS);
                 order.setPaymentStatus(PaymentStatus.PAID);
                 orderRepository.save(order);
+                paymentTransactionService.recordPayment(order,
+                        data.getAmount() == null ? order.getTotalAmount() : BigDecimal.valueOf(data.getAmount()),
+                        paymentReference(data.getReference(), order),
+                        paymentDestination(data), parseTransactionTime(data.getTransactionDateTime()), true);
             } else if (canMarkPaymentCancelled(order)) {
                 markPaymentCancelled(order);
             }
@@ -227,5 +239,38 @@ public class PayOsService {
             }
         }
         orderRepository.save(order);
+    }
+
+    private String paymentReference(String reference, Order order) {
+        return reference == null || reference.isBlank() ? "PAYOS-" + order.getOrderCode() : reference;
+    }
+
+    private String paymentDestination(WebhookData data) {
+        String accountNumber = data.getAccountNumber();
+        String accountName = data.getVirtualAccountName();
+        StringBuilder destination = new StringBuilder("HWSHOP qua PayOS");
+        if (accountName != null && !accountName.isBlank()) {
+            destination.append(" - ").append(accountName);
+        }
+        if (accountNumber != null && !accountNumber.isBlank()) {
+            destination.append(" - TK ").append(accountNumber);
+        }
+        return destination.toString();
+    }
+
+    private LocalDateTime parseTransactionTime(String value) {
+        if (value == null || value.isBlank()) return LocalDateTime.now();
+        for (DateTimeFormatter formatter : new DateTimeFormatter[] {
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+        }) {
+            try {
+                return LocalDateTime.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try the next PayOS-supported timestamp shape.
+            }
+        }
+        return LocalDateTime.now();
     }
 }

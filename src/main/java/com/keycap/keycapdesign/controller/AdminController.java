@@ -4,15 +4,18 @@ import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.order.OrderResponse;
 import com.keycap.keycapdesign.dto.product.ProductRequest;
 import com.keycap.keycapdesign.dto.product.ProductResponse;
+import com.keycap.keycapdesign.dto.review.ReviewResponse;
 import com.keycap.keycapdesign.dto.user.UserResponse;
 import com.keycap.keycapdesign.dto.user.UserStatusUpdateRequest;
 import com.keycap.keycapdesign.dto.user.UserRoleUpdateRequest;
 import com.keycap.keycapdesign.service.OrderService;
 import com.keycap.keycapdesign.service.ProductService;
+import com.keycap.keycapdesign.service.ReviewService;
 import com.keycap.keycapdesign.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -30,11 +33,14 @@ public class AdminController {
     private final UserService userService;
     private final ProductService productService;
     private final OrderService orderService;
+    private final ReviewService reviewService;
 
-    public AdminController(UserService userService, ProductService productService, OrderService orderService) {
+    public AdminController(UserService userService, ProductService productService, OrderService orderService,
+            ReviewService reviewService) {
         this.userService = userService;
         this.productService = productService;
         this.orderService = orderService;
+        this.reviewService = reviewService;
     }
 
     @GetMapping("/users")
@@ -92,5 +98,21 @@ public class AdminController {
     @GetMapping("/products")
     public ApiResponse<List<ProductResponse>> listProducts() {
         return ApiResponse.success(productService.listAllProducts());
+    }
+
+    @GetMapping("/reviews")
+    public ApiResponse<List<ReviewResponse>> listReviews() {
+        return ApiResponse.success(reviewService.listAll());
+    }
+
+    @GetMapping("/reviews/count")
+    public ApiResponse<Long> countReviews() {
+        return ApiResponse.success(reviewService.countReviews());
+    }
+
+    @DeleteMapping("/reviews/{id}")
+    public ApiResponse<String> deleteReview(@PathVariable Long id) {
+        reviewService.deleteReviewAsAdmin(id);
+        return ApiResponse.success("Deleted");
     }
 }

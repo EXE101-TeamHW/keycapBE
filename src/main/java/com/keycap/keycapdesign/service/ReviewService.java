@@ -77,9 +77,19 @@ public class ReviewService {
     }
 
     public List<ReviewResponse> listAll() {
-        return reviewRepository.findAll().stream()
+        return reviewRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public long countReviews() {
+        return reviewRepository.count();
+    }
+
+    public void deleteReviewAsAdmin(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+        reviewRepository.delete(review);
     }
 
     public ReviewResponse updateReview(Long productId, Long reviewId, ReviewRequest request) {

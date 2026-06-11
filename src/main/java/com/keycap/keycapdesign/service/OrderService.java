@@ -52,6 +52,7 @@ public class OrderService {
     private final SimpMessagingTemplate messagingTemplate;
     private final TicketService ticketService;
     private final EmailService emailService;
+    private final PaymentTransactionService paymentTransactionService;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                         UserRepository userRepository, ProductRepository productRepository,
@@ -59,7 +60,8 @@ public class OrderService {
                         @Lazy ConversationService conversationService,
                         SimpMessagingTemplate messagingTemplate,
                         TicketService ticketService,
-                        EmailService emailService) {
+                        EmailService emailService,
+                        PaymentTransactionService paymentTransactionService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
@@ -70,6 +72,7 @@ public class OrderService {
         this.messagingTemplate = messagingTemplate;
         this.ticketService = ticketService;
         this.emailService = emailService;
+        this.paymentTransactionService = paymentTransactionService;
     }
 
     @Transactional
@@ -411,6 +414,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED && order.getPaymentStatus() == com.keycap.keycapdesign.enums.PaymentStatus.PAID) {
             order.setPaymentStatus(com.keycap.keycapdesign.enums.PaymentStatus.REFUNDED);
             orderRepository.save(order);
+            paymentTransactionService.recordRefund(order);
         }
         OrderResponse response = toResponse(order);
         messagingTemplate.convertAndSend("/topic/orders", response);
