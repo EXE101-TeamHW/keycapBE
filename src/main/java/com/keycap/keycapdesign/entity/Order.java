@@ -58,13 +58,13 @@ public class Order extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private PaymentType paymentType = PaymentType.FULL;
 
-    @Column(name = "shipping_address", columnDefinition = "nvarchar(max)")
+    @Column(name = "shipping_address", columnDefinition = "text")
     private String shippingAddress;
 
     @Column(name = "tracking_number")
     private String trackingNumber;
 
-    @Column(name = "proof_images", columnDefinition = "nvarchar(max)")
+    @Column(name = "proof_images", columnDefinition = "text")
     private String proofImagesJson;
 
     @Enumerated(EnumType.STRING)

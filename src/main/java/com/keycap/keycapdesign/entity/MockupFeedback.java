@@ -40,10 +40,10 @@ public class MockupFeedback {
     @Enumerated(EnumType.STRING)
     private FeedbackType type = FeedbackType.COMMENT;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String comment;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String annotationsJson;
 
     @CreatedDate

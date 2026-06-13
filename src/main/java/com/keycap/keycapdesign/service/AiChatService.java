@@ -57,6 +57,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -109,7 +110,7 @@ public class AiChatService {
     @Value("${ai.system.name:Keycap AI Assistant}")
     private String systemName;
 
-    @Value("${ai.system.password:change-me}")
+    @Value("${ai.system.password:}")
     private String systemPassword;
 
     @Value("${ai.response.max-recommendations:5}")
@@ -258,7 +259,7 @@ public class AiChatService {
                     User ai = new User();
                     ai.setEmail(systemEmail);
                     String rawPassword = systemPassword == null || systemPassword.isBlank()
-                            ? systemEmail
+                            ? UUID.randomUUID().toString()
                             : systemPassword;
                     ai.setPassword(passwordEncoder.encode(rawPassword));
                     ai.setFullName(systemName);

@@ -26,21 +26,21 @@ public class CustomRequest extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "design_name", nullable = false, columnDefinition = "nvarchar(255)")
+    @Column(name = "design_name", nullable = false, length = 255)
     private String designName;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "nvarchar(100)")
+    @Column(length = 100)
     private LayoutType layout;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "nvarchar(255)")
+    @Column(length = 255)
     private ProductTheme theme;
 
-    @Column(name = "reference_images", columnDefinition = "nvarchar(max)")
+    @Column(name = "reference_images", columnDefinition = "text")
     private String referenceImagesJson;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String notes;
 
     @Enumerated(EnumType.STRING)

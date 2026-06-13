@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -21,16 +22,17 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
-    private static final String FRONTEND_LOGIN_URL = "http://localhost:5173/login";
-
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final String frontendLoginUrl;
 
-    public OAuth2SuccessHandler(UserRepository userRepository, JwtService jwtService, PasswordEncoder passwordEncoder) {
+    public OAuth2SuccessHandler(UserRepository userRepository, JwtService jwtService, PasswordEncoder passwordEncoder,
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.frontendLoginUrl = frontendUrl + "/login";
     }
 
     @Override
@@ -59,7 +61,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);
-        String redirectUrl = FRONTEND_LOGIN_URL
+        String redirectUrl = frontendLoginUrl
                 + "?token=" + encode(token)
                 + "&userId=" + encode(user.getId())
                 + "&role=" + encode(user.getRole().name());

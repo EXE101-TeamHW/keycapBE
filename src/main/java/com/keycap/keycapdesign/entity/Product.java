@@ -23,10 +23,10 @@ import java.math.BigDecimal;
 @Table(name = "products")
 public class Product extends BaseEntity {
 
-    @Column(nullable = false, columnDefinition = "nvarchar(255)")
+    @Column(nullable = false, length = 255)
     private String name;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -47,7 +47,7 @@ public class Product extends BaseEntity {
     @Column(name = "stock_quantity")
     private Integer stockQuantity = 0;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String imagesJson;
 
     @Enumerated(EnumType.STRING)

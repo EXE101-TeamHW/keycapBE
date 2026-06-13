@@ -57,7 +57,7 @@ public class PaymentTransaction extends BaseEntity {
     @Column(nullable = false)
     private Role actorRole;
 
-    @Column(name = "destination", columnDefinition = "nvarchar(255)", nullable = false)
+    @Column(name = "destination", length = 255, nullable = false)
     private String destination;
 
     @Column(name = "external_reference", unique = true)

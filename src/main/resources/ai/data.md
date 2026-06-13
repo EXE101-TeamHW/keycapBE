@@ -1311,7 +1311,7 @@ Thêm miếng foam nhỏ vào stab để giảm rattle và cải thiện sound.
 ### 18.3 Chính sách thanh toán
 
 **Phương thức thanh toán:**
-- Hỗ trợ thanh toán trực tuyến bằng mã QR, chuyển khoản nhanh qua thẻ ATM nội địa, Visa/Mastercard quốc tế thông qua cổng thanh toán bảo mật VNPAY hoặc PayOS.
+- Hỗ trợ thanh toán trực tuyến bằng mã QR và chuyển khoản nhanh thông qua cổng thanh toán bảo mật PayOS.
 - Với PayOS, khách hàng thanh toán qua mã QR được cấp tự động sau khi đặt hàng.
 - Đối với đơn custom keycap riêng, khách hàng cần đặt cọc trước 50% giá trị đơn hàng để shop chuẩn bị vật liệu và sản xuất.
 - Phần còn lại của đơn custom được thanh toán khi nhận hàng.

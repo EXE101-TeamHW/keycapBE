@@ -25,7 +25,7 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private String password;
 
-    @Column(name = "full_name", columnDefinition = "nvarchar(255)")
+    @Column(name = "full_name", length = 255)
     private String fullName;
 
     private String phone;
@@ -33,7 +33,7 @@ public class User extends BaseEntity {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "bank_account", columnDefinition = "nvarchar(255)")
+    @Column(name = "bank_account", length = 255)
     private String bankAccount;
 
     @Enumerated(EnumType.STRING)

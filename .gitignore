@@ -3,7 +3,6 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-**/src/main/resources/application.properties
 **/src/main/resources/application-example.properties
 ### STS ###
 .apt_generated
@@ -14,6 +13,11 @@ target/
 .springBeans
 .sts4-cache
 .env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+application-local.yaml
 ### IntelliJ IDEA ###
 .idea
 *.iws

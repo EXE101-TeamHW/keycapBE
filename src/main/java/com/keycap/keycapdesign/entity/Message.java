@@ -28,7 +28,7 @@ public class Message extends BaseEntity {
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-    @Column(nullable = false, columnDefinition = "nvarchar(max)")
+    @Column(nullable = false, columnDefinition = "text")
     private String content;
 
     @Enumerated(EnumType.STRING)

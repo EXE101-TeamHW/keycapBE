@@ -42,7 +42,7 @@ public class Mockup {
     @Enumerated(EnumType.STRING)
     private MockupFileType fileType = MockupFileType.IMAGE;
 
-    @Column(columnDefinition = "nvarchar(max)")
+    @Column(columnDefinition = "text")
     private String description;
 
     @Enumerated(EnumType.STRING)
