@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -54,10 +58,34 @@ public class ConversationController {
         return ApiResponse.success(conversationService.listConversations(currentUserService.getCurrentUserId()));
     }
 
+    @GetMapping("/paged")
+    public ApiResponse<Page<ConversationResponse>> listPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ApiResponse.success(conversationService.listConversations(currentUserService.getCurrentUserId(), pageable));
+    }
+
     @GetMapping("/{conversationId}/messages")
     public ApiResponse<List<MessageResponse>> messages(@PathVariable Long conversationId) {
         return ApiResponse.success(conversationService.getMessages(conversationId,
                 currentUserService.getCurrentUserId()));
+    }
+
+    @GetMapping("/by-ticket/{ticketId}")
+    public ApiResponse<ConversationResponse> byTicket(@PathVariable Long ticketId) {
+        return ApiResponse.success(conversationService.findByTicketId(ticketId, currentUserService.getCurrentUserId()));
+    }
+
+    @GetMapping("/{conversationId}")
+    public ApiResponse<ConversationResponse> get(@PathVariable Long conversationId) {
+        return ApiResponse.success(conversationService.findById(conversationId, currentUserService.getCurrentUserId()));
+    }
+
+    @GetMapping("/by-order/{orderId}")
+    public ApiResponse<ConversationResponse> byOrder(@PathVariable Long orderId) {
+        return ApiResponse.success(conversationService.findByOrderId(orderId, currentUserService.getCurrentUserId()));
     }
 
     @PutMapping("/{conversationId}/read")

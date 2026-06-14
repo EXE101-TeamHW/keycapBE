@@ -5,8 +5,10 @@ import com.keycap.keycapdesign.dto.order.OrderItemRequest;
 import com.keycap.keycapdesign.dto.order.OrderItemResponse;
 import com.keycap.keycapdesign.dto.order.OrderResponse;
 import com.keycap.keycapdesign.dto.order.OrderStatusUpdateRequest;
+import com.keycap.keycapdesign.dto.order.AdminOrderListItemResponse;
 import com.keycap.keycapdesign.entity.Order;
 import com.keycap.keycapdesign.entity.OrderItem;
+import com.keycap.keycapdesign.entity.Conversation;
 import com.keycap.keycapdesign.entity.Product;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
@@ -27,6 +29,9 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +39,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -155,22 +162,56 @@ public class OrderService {
     }
 
     public List<OrderResponse> listOrders(Long userId) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return listResponses("customer-orders", orderRepository.findByUserIdOrderByCreatedAtDesc(userId));
     }
 
     public List<OrderResponse> listAllOrders() {
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return listResponses("admin-orders", orderRepository.findAllByOrderByCreatedAtDesc());
     }
 
     public List<OrderResponse> listOrdersForStaff(Long staffId) {
-        return orderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(o -> o.getAssignedStaff() != null && o.getAssignedStaff().getId().equals(staffId))
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return listResponses("staff-orders", orderRepository.findByAssignedStaffIdOrderByCreatedAtDesc(staffId));
+    }
+
+    public Page<OrderResponse> listAllOrders(Pageable pageable) {
+        return toResponsePage("admin-orders-paged", orderRepository.findAll(pageable), pageable);
+    }
+
+    public Page<AdminOrderListItemResponse> listAdminOrders(Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<Order> orders = orderRepository.findAll(pageable);
+        return toAdminOrderListPage(orders, pageable, startedAt);
+    }
+
+    public Page<AdminOrderListItemResponse> listAdminOrders(OrderStatus status, Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<Order> orders = status == null ? orderRepository.findAll(pageable) : orderRepository.findByStatus(status, pageable);
+        return toAdminOrderListPage(orders, pageable, startedAt);
+    }
+
+    private Page<AdminOrderListItemResponse> toAdminOrderListPage(Page<Order> orders, Pageable pageable, long startedAt) {
+        Page<AdminOrderListItemResponse> result = orders.map(order -> new AdminOrderListItemResponse(
+                order.getId(), order.getOrderCode(), order.getUser().getId(), order.getUser().getFullName(),
+                order.getUser().getEmail(), order.getUser().getPhone(), order.getUser().getBankAccount(),
+                order.getStatus(), order.getPaymentStatus(), order.getPaymentMethod(), order.getPaymentType(),
+                order.getTotalAmount(), order.getType(), order.getCreatedAt(), order.getUpdatedAt(),
+                order.getDeliveryDeadline(), order.getShippingAddress(), order.getTrackingNumber(),
+                order.getProofImagesJson(),
+                order.getAssignedStaff() == null ? null : order.getAssignedStaff().getId(),
+                order.getAssignedStaff() == null ? null : order.getAssignedStaff().getFullName(),
+                order.getTicket() == null ? null : order.getTicket().getId(),
+                order.getTicket() == null ? null : order.getTicket().getTicketCode()));
+        log.info("[PERF] admin-orders-list page={} size={} count={} took={} ms", pageable.getPageNumber(),
+                pageable.getPageSize(), result.getNumberOfElements(), (System.nanoTime() - startedAt) / 1_000_000);
+        return result;
+    }
+
+    public Page<OrderResponse> listOrders(Long userId, Pageable pageable) {
+        return toResponsePage("customer-orders-paged", orderRepository.findByUserId(userId, pageable), pageable);
+    }
+
+    public Page<OrderResponse> listOrdersForStaff(Long staffId, Pageable pageable) {
+        return toResponsePage("staff-orders-paged", orderRepository.findByAssignedStaffId(staffId, pageable), pageable);
     }
 
     @Transactional
@@ -230,18 +271,21 @@ public class OrderService {
                 order.setDeliveryDeadline(LocalDate.now().plusDays(7));
             }
         }
+        order.setUpdatedAt(java.time.LocalDateTime.now());
 
-        orderRepository.save(order);
+        orderRepository.saveAndFlush(order);
         conversationService.getOrCreateConversationForOrder(
                 order.getUser().getId(), ticket.getAssignedStaff().getId(), order.getId());
 
         OrderResponse response = toResponse(order);
         messagingTemplate.convertAndSend("/topic/orders", response);
+        boolean emailSent = false;
         try {
-            emailService.sendCustomOrderCreated(order);
+            emailSent = emailService.sendCustomOrderCreated(order);
         } catch (Exception e) {
             log.warn("Failed to send custom order email for order {}", order.getId(), e);
         }
+        response.setNotificationEmailSent(emailSent);
         return response;
     }
 
@@ -352,6 +396,19 @@ public class OrderService {
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
+        Ticket ticket = order.getTicket();
+        if (ticket != null) {
+            ticket.setAssignedStaff(staff);
+            if (ticket.getStatus() == TicketStatus.PENDING) {
+                ticket.setStatus(TicketStatus.IN_REVIEW);
+                if (ticket.getRequest() != null && ticket.getRequest().getStatus() == TicketStatus.PENDING) {
+                    ticket.getRequest().setStatus(TicketStatus.IN_REVIEW);
+                }
+            }
+            ticketRepository.save(ticket);
+            ticketService.broadcastTicketUpdate(ticket);
+        }
+
         // Auto-create or reuse conversation between customer and assigned staff
         conversationService.getOrCreateConversationForOrder(
                 order.getUser().getId(), staffId, order.getId());
@@ -440,7 +497,47 @@ public class OrderService {
     }
 
     private OrderResponse toResponse(Order order) {
-        List<OrderItemResponse> items = orderItemRepository.findByOrderId(order.getId()).stream()
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        Long conversationId = conversationRepository.findByOrderId(order.getId())
+                .map(Conversation::getId)
+                .orElse(null);
+        return toResponse(order, orderItems, conversationId);
+    }
+
+    private List<OrderResponse> listResponses(String operation, List<Order> orders) {
+        long startedAt = System.nanoTime();
+        List<OrderResponse> responses = toResponses(orders);
+        log.info("[PERF] {} count={} took={} ms", operation, responses.size(),
+                (System.nanoTime() - startedAt) / 1_000_000);
+        return responses;
+    }
+
+    private Page<OrderResponse> toResponsePage(String operation, Page<Order> orders, Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<OrderResponse> result = new PageImpl<>(toResponses(orders.getContent()), pageable, orders.getTotalElements());
+        log.info("[PERF] {} page={} size={} count={} took={} ms", operation, pageable.getPageNumber(),
+                pageable.getPageSize(), result.getNumberOfElements(), (System.nanoTime() - startedAt) / 1_000_000);
+        return result;
+    }
+
+    private List<OrderResponse> toResponses(List<Order> orders) {
+        if (orders.isEmpty()) {
+            return List.of();
+        }
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        Map<Long, List<OrderItem>> itemsByOrderId = orderItemRepository.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+        Map<Long, Long> conversationIdsByOrderId = conversationRepository.findByOrderIdIn(orderIds).stream()
+                .filter(conversation -> conversation.getOrderId() != null)
+                .collect(Collectors.toMap(Conversation::getOrderId, Conversation::getId, (left, right) -> left));
+        return orders.stream()
+                .map(order -> toResponse(order, itemsByOrderId.getOrDefault(order.getId(), Collections.emptyList()),
+                        conversationIdsByOrderId.get(order.getId())))
+                .toList();
+    }
+
+    private OrderResponse toResponse(Order order, List<OrderItem> orderItems, Long conversationId) {
+        List<OrderItemResponse> items = orderItems.stream()
                 .map(item -> new OrderItemResponse(item.getId(),
                         item.getProduct() == null ? null : item.getProduct().getId(),
                         item.getProduct() == null ? null : item.getProduct().getName(),
@@ -454,20 +551,17 @@ public class OrderService {
         Long staffId = order.getAssignedStaff() != null ? order.getAssignedStaff().getId() : null;
         String staffName = order.getAssignedStaff() != null ? order.getAssignedStaff().getFullName() : null;
 
-        // Find linked conversation
-        Long conversationId = conversationRepository.findByOrderId(order.getId())
-                .map(c -> c.getId())
-                .orElse(null);
-
         com.keycap.keycapdesign.enums.TicketStatus ticketStatus = order.getTicket() != null ? order.getTicket().getStatus() : null;
 
-        return new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(), 
+        OrderResponse response = new OrderResponse(order.getId(), order.getOrderCode(), order.getUser().getId(),
                 customerName, customerEmail, customerPhone, bankAccount, staffId, staffName,
                 order.getType(),
                 order.getTicket() == null ? null : order.getTicket().getId(), order.getTotalAmount(),
                 order.getPaymentMethod(), order.getPaymentStatus(), order.getPaymentType(), order.getShippingAddress(),
                 order.getTrackingNumber(), order.getProofImagesJson(), order.getStatus(), order.getCreatedAt(), items,
                 conversationId, ticketStatus, order.getDeliveryDeadline());
+        response.setUpdatedAt(order.getUpdatedAt());
+        return response;
     }
 
     private void setOrderDeliveryDeadline(Order order) {

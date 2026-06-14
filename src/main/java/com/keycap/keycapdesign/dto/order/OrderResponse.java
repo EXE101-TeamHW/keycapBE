@@ -31,10 +31,12 @@ public class OrderResponse {
     private String proofImagesJson;
     private OrderStatus status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private List<OrderItemResponse> items;
     private Long conversationId;
     private com.keycap.keycapdesign.enums.TicketStatus ticketStatus;
     private java.time.LocalDate deliveryDeadline;
+    private Boolean notificationEmailSent;
 
     public OrderResponse(Long id, String orderCode, Long userId, String customerName, String customerEmail, String customerPhone, String customerBankAccount, 
                          Long staffId, String staffName, OrderType type, Long ticketId, BigDecimal totalAmount,
@@ -144,6 +146,14 @@ public class OrderResponse {
         return createdAt;
     }
 
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public String getProofImagesJson() {
         return proofImagesJson;
     }
@@ -162,6 +172,14 @@ public class OrderResponse {
 
     public java.time.LocalDate getDeliveryDeadline() {
         return deliveryDeadline;
+    }
+
+    public Boolean getNotificationEmailSent() {
+        return notificationEmailSent;
+    }
+
+    public void setNotificationEmailSent(Boolean notificationEmailSent) {
+        this.notificationEmailSent = notificationEmailSent;
     }
 }
 

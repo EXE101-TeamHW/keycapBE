@@ -2,6 +2,7 @@ package com.keycap.keycapdesign.controller;
 
 import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.order.OrderResponse;
+import com.keycap.keycapdesign.dto.order.AdminOrderListItemResponse;
 import com.keycap.keycapdesign.dto.product.ProductRequest;
 import com.keycap.keycapdesign.dto.product.ProductResponse;
 import com.keycap.keycapdesign.dto.review.ReviewResponse;
@@ -23,6 +24,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -46,6 +50,13 @@ public class AdminController {
     @GetMapping("/users")
     public ApiResponse<List<UserResponse>> listUsers() {
         return ApiResponse.success(userService.getAllUsers());
+    }
+
+    @GetMapping("/users/paged")
+    public ApiResponse<Page<UserResponse>> listUsersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(userService.getUsers(pageRequest(page, size)));
     }
 
     @PutMapping("/users/{id}/status")
@@ -74,6 +85,14 @@ public class AdminController {
     @GetMapping("/orders")
     public ApiResponse<List<OrderResponse>> listOrders() {
         return ApiResponse.success(orderService.listAllOrders());
+    }
+
+    @GetMapping("/orders/paged")
+    public ApiResponse<Page<AdminOrderListItemResponse>> listOrdersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) com.keycap.keycapdesign.enums.OrderStatus status) {
+        return ApiResponse.success(orderService.listAdminOrders(status, pageRequest(page, size)));
     }
 
     /**
@@ -114,5 +133,10 @@ public class AdminController {
     public ApiResponse<String> deleteReview(@PathVariable Long id) {
         reviewService.deleteReviewAsAdmin(id);
         return ApiResponse.success("Deleted");
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 }

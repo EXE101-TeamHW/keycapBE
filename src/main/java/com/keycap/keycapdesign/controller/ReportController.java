@@ -4,6 +4,7 @@ import com.keycap.keycapdesign.common.ApiResponse;
 import com.keycap.keycapdesign.dto.report.RevenueReportItem;
 import com.keycap.keycapdesign.dto.report.StaffPerformanceItem;
 import com.keycap.keycapdesign.dto.report.TrendItem;
+import com.keycap.keycapdesign.dto.report.DashboardSummaryResponse;
 import com.keycap.keycapdesign.service.ReportService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,5 +42,12 @@ public class ReportController {
     @GetMapping("/trends")
     public ApiResponse<List<TrendItem>> trends() {
         return ApiResponse.success(reportService.trends());
+    }
+
+    @GetMapping("/dashboard-summary")
+    public ApiResponse<DashboardSummaryResponse> dashboardSummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ApiResponse.success(reportService.dashboardSummary(from, to));
     }
 }

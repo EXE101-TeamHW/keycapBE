@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.payos.exception.UnauthorizedException;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/custom-requests")
@@ -46,6 +50,15 @@ public class CustomRequestController {
     @GetMapping
     public ApiResponse<List<CustomRequestResponse>> list() {
         return ApiResponse.success(customRequestService.listByUser(currentUserService.getCurrentUserId()));
+    }
+
+    @GetMapping("/paged")
+    public ApiResponse<Page<CustomRequestResponse>> listPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ApiResponse.success(customRequestService.listByUser(currentUserService.getCurrentUserId(), pageable));
     }
 
     @GetMapping("/{id}")

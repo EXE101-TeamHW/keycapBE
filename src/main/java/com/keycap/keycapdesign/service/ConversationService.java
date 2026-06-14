@@ -21,13 +21,21 @@ import com.keycap.keycapdesign.repository.OrderRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class ConversationService {
+    private static final Logger log = LoggerFactory.getLogger(ConversationService.class);
+
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
@@ -176,6 +184,7 @@ public class ConversationService {
     }
 
     public List<ConversationResponse> listConversations(Long userId) {
+        long startedAt = System.nanoTime();
         User user = getUser(userId);
         List<Conversation> conversations;
         if (user.getRole() == Role.CUSTOMER) {
@@ -185,9 +194,43 @@ public class ConversationService {
         } else {
             conversations = conversationRepository.findAllByOrderByCreatedAtDesc();
         }
-        return conversations.stream()
-                .map(conversation -> toConversationResponse(conversation, userId))
-                .collect(Collectors.toList());
+        List<ConversationResponse> result = toConversationResponses(conversations, userId);
+        log.info("[PERF] conversations count={} took={} ms", result.size(),
+                (System.nanoTime() - startedAt) / 1_000_000);
+        return result;
+    }
+
+    public Page<ConversationResponse> listConversations(Long userId, Pageable pageable) {
+        long startedAt = System.nanoTime();
+        User user = getUser(userId);
+        Page<Conversation> conversations = user.getRole() == Role.CUSTOMER
+                ? conversationRepository.findByCustomerId(userId, pageable)
+                : conversationRepository.findAll(pageable);
+        Page<ConversationResponse> result = new PageImpl<>(
+                toConversationResponses(conversations.getContent(), userId), pageable, conversations.getTotalElements());
+        log.info("[PERF] conversations page={} size={} count={} took={} ms", pageable.getPageNumber(),
+                pageable.getPageSize(), result.getNumberOfElements(), (System.nanoTime() - startedAt) / 1_000_000);
+        return result;
+    }
+
+    public ConversationResponse findByTicketId(Long ticketId, Long viewerId) {
+        Conversation conversation = conversationRepository.findByTicketId(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        validateParticipant(conversation, getUser(viewerId));
+        return toConversationResponse(conversation, viewerId);
+    }
+
+    public ConversationResponse findById(Long conversationId, Long viewerId) {
+        Conversation conversation = getConversation(conversationId);
+        validateParticipant(conversation, getUser(viewerId));
+        return toConversationResponse(conversation, viewerId);
+    }
+
+    public ConversationResponse findByOrderId(Long orderId, Long viewerId) {
+        Conversation conversation = conversationRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        validateParticipant(conversation, getUser(viewerId));
+        return toConversationResponse(conversation, viewerId);
     }
 
     public List<MessageResponse> getMessages(Long conversationId, Long userId) {
@@ -290,6 +333,9 @@ public class ConversationService {
     }
 
     private void validateParticipant(Conversation conversation, User user) {
+        if (user.getRole() == Role.ADMIN) {
+            return;
+        }
         if (user.getRole() == Role.CUSTOMER && conversation.getCustomer().getId().equals(user.getId())) {
             return;
         }
@@ -323,6 +369,31 @@ public class ConversationService {
                 unreadCount,
                 conversation.getCreatedAt(),
                 conversation.getTicketId());
+    }
+
+    private List<ConversationResponse> toConversationResponses(List<Conversation> conversations, Long viewerId) {
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+        List<Long> conversationIds = conversations.stream().map(Conversation::getId).toList();
+        Map<Long, Long> unreadByConversationId = messageRepository
+                .countUnreadByConversationIds(conversationIds, viewerId).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        return conversations.stream()
+                .map(conversation -> {
+                    User staff = conversation.getStaff();
+                    return new ConversationResponse(conversation.getId(),
+                            conversation.getCustomer().getId(),
+                            conversation.getCustomer().getFullName(),
+                            staff == null ? null : staff.getId(),
+                            staff == null ? null : staff.getFullName(),
+                            conversation.getOrderId(),
+                            conversation.getStatus(),
+                            unreadByConversationId.getOrDefault(conversation.getId(), 0L),
+                            conversation.getCreatedAt(),
+                            conversation.getTicketId());
+                })
+                .toList();
     }
 
     private MessageResponse toMessageResponse(Message message) {

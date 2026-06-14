@@ -10,6 +10,7 @@ import com.keycap.keycapdesign.dto.ticket.TicketAssignRequest;
 import com.keycap.keycapdesign.dto.ticket.TicketQuotePriceRequest;
 import com.keycap.keycapdesign.dto.ticket.TicketResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketStatusUpdateRequest;
+import com.keycap.keycapdesign.dto.ticket.StaffTicketListItemResponse;
 import com.keycap.keycapdesign.enums.Role;
 import com.keycap.keycapdesign.security.CurrentUserService;
 import com.keycap.keycapdesign.service.FeedbackService;
@@ -26,6 +27,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import vn.payos.exception.UnauthorizedException;
 
 import java.util.List;
@@ -57,6 +61,32 @@ public class TicketController {
             return ApiResponse.success(ticketService.listByUser(userId));
         }
         return ApiResponse.success(ticketService.listTickets());
+    }
+
+    @GetMapping("/paged")
+    public ApiResponse<Page<TicketResponse>> listPaged(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (currentUserService.getCurrentUser().getRole() == Role.CUSTOMER) {
+            return ApiResponse.success(ticketService.listByUser(currentUserService.getCurrentUserId(), pageable));
+        }
+        if (userId != null) {
+            return ApiResponse.success(ticketService.listByUser(userId, pageable));
+        }
+        return ApiResponse.success(ticketService.listTickets(pageable));
+    }
+
+    @GetMapping("/staff/paged")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public ApiResponse<Page<StaffTicketListItemResponse>> listStaffPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ApiResponse.success(ticketService.listStaffTickets(pageable));
     }
 
     @GetMapping("/{id}")

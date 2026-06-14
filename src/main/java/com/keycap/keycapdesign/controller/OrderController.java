@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import vn.payos.exception.UnauthorizedException;
 
 import java.util.List;
@@ -48,6 +51,15 @@ public class OrderController {
         return ApiResponse.success(orderService.listOrders(currentUserService.getCurrentUserId()));
     }
 
+    @GetMapping("/paged")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ApiResponse<Page<OrderResponse>> listPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(orderService.listOrders(currentUserService.getCurrentUserId(),
+                pageRequest(page, size)));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> get(@PathVariable Long id) {
         OrderResponse response = orderService.getOrder(id);
@@ -62,6 +74,15 @@ public class OrderController {
     @PreAuthorize("hasRole('STAFF')")
     public ApiResponse<List<OrderResponse>> listForStaff() {
         return ApiResponse.success(orderService.listOrdersForStaff(currentUserService.getCurrentUserId()));
+    }
+
+    @GetMapping("/staff/paged")
+    @PreAuthorize("hasRole('STAFF')")
+    public ApiResponse<Page<OrderResponse>> listForStaffPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(orderService.listOrdersForStaff(currentUserService.getCurrentUserId(),
+                pageRequest(page, size)));
     }
 
     /** Staff updates status: CONFIRMED → PROCESSING → SHIPPING → DELIVERED → COMPLETED */
@@ -88,5 +109,10 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     public ApiResponse<OrderResponse> refundOrder(@PathVariable Long id) {
         return ApiResponse.success(orderService.refundOrder(id));
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 }

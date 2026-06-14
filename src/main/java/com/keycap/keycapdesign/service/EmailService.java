@@ -81,13 +81,13 @@ public class EmailService {
         }
     }
 
-    public void sendCustomOrderCreated(Order order) {
+    public boolean sendCustomOrderCreated(Order order) {
         if (!mailEnabled) {
-            return;
+            return false;
         }
         if (order == null || order.getUser() == null || order.getUser().getEmail() == null
                 || order.getUser().getEmail().isBlank()) {
-            return;
+            return false;
         }
         if (fromEmail == null || fromEmail.isBlank()) {
             throw new BadRequestException("Mail sender is not configured");
@@ -100,6 +100,7 @@ public class EmailService {
             helper.setSubject("Đơn custom của bạn đã được lên đơn");
             helper.setText(buildCustomOrderCreatedHtml(order), true);
             mailSender.send(message);
+            return true;
         } catch (MessagingException e) {
             throw new BadRequestException("Failed to send custom order email");
         }

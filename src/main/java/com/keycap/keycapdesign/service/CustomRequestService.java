@@ -27,8 +27,13 @@ import java.util.Collections;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class CustomRequestService {
@@ -110,12 +115,34 @@ public class CustomRequestService {
     }
 
     public List<CustomRequestResponse> listByUser(Long userId) {
-        return customRequestRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(req -> {
-                    Ticket ticket = ticketRepository.findByRequestId(req.getId()).orElse(null);
-                    return toResponse(req, ticket != null ? ticket.getId() : null);
-                })
+        List<CustomRequest> requests = customRequestRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        if (requests.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Ticket> ticketsByRequestId = ticketRepository
+                .findByRequestIdIn(requests.stream().map(CustomRequest::getId).toList()).stream()
+                .collect(Collectors.toMap(ticket -> ticket.getRequest().getId(), Function.identity(),
+                        (left, right) -> left));
+        return requests.stream()
+                .map(request -> toResponse(request,
+                        ticketsByRequestId.containsKey(request.getId()) ? ticketsByRequestId.get(request.getId()).getId() : null))
                 .collect(Collectors.toList());
+    }
+
+    public Page<CustomRequestResponse> listByUser(Long userId, Pageable pageable) {
+        Page<CustomRequest> requests = customRequestRepository.findByUserId(userId, pageable);
+        if (requests.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        Map<Long, Ticket> ticketsByRequestId = ticketRepository
+                .findByRequestIdIn(requests.getContent().stream().map(CustomRequest::getId).toList()).stream()
+                .collect(Collectors.toMap(ticket -> ticket.getRequest().getId(), Function.identity(),
+                        (left, right) -> left));
+        List<CustomRequestResponse> content = requests.getContent().stream()
+                .map(request -> toResponse(request,
+                        ticketsByRequestId.containsKey(request.getId()) ? ticketsByRequestId.get(request.getId()).getId() : null))
+                .toList();
+        return new PageImpl<>(content, pageable, requests.getTotalElements());
     }
 
     public CustomRequestResponse getById(Long id) {

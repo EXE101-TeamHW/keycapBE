@@ -3,6 +3,7 @@ package com.keycap.keycapdesign.service;
 import com.keycap.keycapdesign.dto.ticket.TicketAssignRequest;
 import com.keycap.keycapdesign.dto.ticket.TicketResponse;
 import com.keycap.keycapdesign.dto.ticket.TicketStatusUpdateRequest;
+import com.keycap.keycapdesign.dto.ticket.StaffTicketListItemResponse;
 import com.keycap.keycapdesign.entity.Ticket;
 import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.entity.Order;
@@ -15,14 +16,25 @@ import com.keycap.keycapdesign.repository.TicketRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import com.keycap.keycapdesign.repository.OrderRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class TicketService {
+    private static final Logger log = LoggerFactory.getLogger(TicketService.class);
+
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
@@ -38,15 +50,69 @@ public class TicketService {
     }
 
     public List<TicketResponse> listTickets() {
-        return ticketRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        long startedAt = System.nanoTime();
+        List<TicketResponse> result = toResponses(ticketRepository.findAllByOrderByCreatedAtDesc());
+        logPerformance("all", result.size(), startedAt);
+        return result;
     }
 
     public List<TicketResponse> listByUser(Long userId) {
-        return ticketRepository.findByRequestUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        long startedAt = System.nanoTime();
+        List<TicketResponse> result = toResponses(ticketRepository.findByRequestUserIdOrderByCreatedAtDesc(userId));
+        logPerformance("user", result.size(), startedAt);
+        return result;
+    }
+
+    public Page<TicketResponse> listTickets(Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<Ticket> tickets = ticketRepository.findAllWithDetails(pageable);
+        Page<TicketResponse> result = new PageImpl<>(toResponses(tickets.getContent()), pageable, tickets.getTotalElements());
+        logPerformance("paged", result.getNumberOfElements(), startedAt);
+        return result;
+    }
+
+    public Page<TicketResponse> listByUser(Long userId, Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<Ticket> tickets = ticketRepository.findByRequestUserId(userId, pageable);
+        Page<TicketResponse> result = new PageImpl<>(toResponses(tickets.getContent()), pageable, tickets.getTotalElements());
+        logPerformance("user-paged", result.getNumberOfElements(), startedAt);
+        return result;
+    }
+
+    public Page<StaffTicketListItemResponse> listStaffTickets(Pageable pageable) {
+        long startedAt = System.nanoTime();
+        Page<Ticket> tickets = ticketRepository.findAllWithDetails(pageable);
+        List<Long> ticketIds = tickets.getContent().stream().map(Ticket::getId).toList();
+        Map<Long, Order> ordersByTicketId = ticketIds.isEmpty() ? Map.of()
+                : orderRepository.findByTicketIdIn(ticketIds).stream()
+                .filter(order -> order.getTicket() != null)
+                .collect(Collectors.toMap(order -> order.getTicket().getId(), Function.identity(),
+                        (left, right) -> left));
+        List<StaffTicketListItemResponse> content = tickets.getContent().stream()
+                .map(ticket -> {
+                    User customer = ticket.getRequest().getUser();
+                    Order order = ordersByTicketId.get(ticket.getId());
+                    return new StaffTicketListItemResponse(
+                            ticket.getId(), ticket.getTicketCode(), customer.getId(), customer.getFullName(),
+                            customer.getEmail(), customer.getPhone(), customer.getBankAccount(),
+                            ticket.getRequest().getDesignName(), ticket.getRequest().getReferenceImagesJson(),
+                            ticket.getRequest().getNotes(),
+                            ticket.getRequest().getLayout() == null ? null : ticket.getRequest().getLayout().name(),
+                            ticket.getRequest().getTheme() == null ? null : ticket.getRequest().getTheme().name(),
+                            ticket.getDeadline(), ticket.getRevisionCount(), ticket.getQuotedPrice(),
+                            ticket.getStatus(), ticket.getCreatedAt(), ticket.getUpdatedAt(),
+                            ticket.getAssignedStaff() == null ? null : ticket.getAssignedStaff().getId(),
+                            ticket.getAssignedStaff() == null ? null : ticket.getAssignedStaff().getFullName(),
+                            ticket.getAdmin() == null ? null : ticket.getAdmin().getFullName(),
+                            order == null ? null : order.getId(),
+                            order == null ? null : order.getOrderCode(),
+                            order == null ? null : order.getStatus().name(),
+                            order == null ? null : order.getPaymentStatus().name());
+                })
+                .toList();
+        Page<StaffTicketListItemResponse> result = new PageImpl<>(content, pageable, tickets.getTotalElements());
+        logPerformance("staff-paged", result.getNumberOfElements(), startedAt);
+        return result;
     }
 
     public TicketResponse getTicket(Long id) {
@@ -55,6 +121,7 @@ public class TicketService {
         return toResponse(ticket);
     }
 
+    @Transactional
     public TicketResponse assignTicket(Long id, TicketAssignRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
@@ -86,6 +153,7 @@ public class TicketService {
         return toResponse(ticket);
     }
 
+    @Transactional
     public TicketResponse updateStatus(Long id, TicketStatusUpdateRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
@@ -98,6 +166,7 @@ public class TicketService {
         return toResponse(ticket);
     }
 
+    @Transactional
     public TicketResponse updateQuotedPrice(Long id, BigDecimal quotedPrice) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
@@ -176,7 +245,24 @@ public class TicketService {
         }
     }
 
+    private List<TicketResponse> toResponses(List<Ticket> tickets) {
+        if (tickets.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ticketIds = tickets.stream().map(Ticket::getId).toList();
+        Map<Long, Order> ordersByTicketId = orderRepository.findByTicketIdIn(ticketIds).stream()
+                .filter(order -> order.getTicket() != null)
+                .collect(Collectors.toMap(order -> order.getTicket().getId(), Function.identity(), (left, right) -> left));
+        return tickets.stream()
+                .map(ticket -> toResponse(ticket, ordersByTicketId.get(ticket.getId())))
+                .toList();
+    }
+
     private TicketResponse toResponse(Ticket ticket) {
+        return toResponse(ticket, orderRepository.findByTicketId(ticket.getId()).orElse(null));
+    }
+
+    private TicketResponse toResponse(Ticket ticket, Order order) {
         String designName = ticket.getRequest() != null ? ticket.getRequest().getDesignName() : null;
         String refImages = ticket.getRequest() != null ? ticket.getRequest().getReferenceImagesJson() : null;
         Long customerId = ticket.getRequest() != null && ticket.getRequest().getUser() != null
@@ -196,7 +282,6 @@ public class TicketService {
         String theme = ticket.getRequest() != null && ticket.getRequest().getTheme() != null
                 ? ticket.getRequest().getTheme().name() : null;
 
-        Order order = orderRepository.findByTicketId(ticket.getId()).orElse(null);
         Long orderId = order != null ? order.getId() : null;
         String orderStatus = order != null ? order.getStatus().name() : null;
         String orderPaymentStatus = order != null ? order.getPaymentStatus().name() : null;
@@ -208,5 +293,10 @@ public class TicketService {
                 designName, refImages, customerId, customerName, customerEmail, customerPhone, assignedStaffName,
                 notes, customerBankAccount, layout, theme,
                 orderId, orderStatus, orderPaymentStatus, ticket.getQuotedPrice());
+    }
+
+    private void logPerformance(String operation, int count, long startedAt) {
+        long tookMs = (System.nanoTime() - startedAt) / 1_000_000;
+        log.info("[PERF] tickets operation={} count={} took={} ms", operation, count, tookMs);
     }
 }
