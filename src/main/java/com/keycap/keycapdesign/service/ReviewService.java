@@ -9,30 +9,37 @@ import com.keycap.keycapdesign.entity.User;
 import com.keycap.keycapdesign.exception.ResourceNotFoundException;
 import com.keycap.keycapdesign.exception.BadRequestException;
 import com.keycap.keycapdesign.repository.OrderRepository;
+import com.keycap.keycapdesign.repository.OrderItemRepository;
 import com.keycap.keycapdesign.repository.ProductRepository;
 import com.keycap.keycapdesign.repository.ReviewRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import com.keycap.keycapdesign.util.JsonUtil;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public ReviewService(ReviewRepository reviewRepository, ProductRepository productRepository,
-                         UserRepository userRepository, OrderRepository orderRepository) {
+                         UserRepository userRepository, OrderRepository orderRepository,
+                         OrderItemRepository orderItemRepository) {
         this.reviewRepository = reviewRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
+    @Transactional
     public ReviewResponse createReview(Long productId, Long orderId, ReviewRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -44,19 +51,17 @@ public class ReviewService {
                     .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
             
             if (!order.getUser().getId().equals(user.getId())) {
-                throw new IllegalArgumentException("You can only review products from your own orders");
+                throw new BadRequestException("You can only review products from your own orders");
             }
             if (reviewRepository.existsByOrderIdAndProductId(orderId, productId)) {
                 throw new BadRequestException("You have already reviewed this product for this order");
             }
             if (!com.keycap.keycapdesign.enums.OrderStatus.DELIVERED.equals(order.getStatus())
                     && !com.keycap.keycapdesign.enums.OrderStatus.COMPLETED.equals(order.getStatus())) {
-                throw new IllegalArgumentException("You can only review products from delivered or completed orders");
+                throw new BadRequestException("You can only review products from delivered or completed orders");
             }
-            boolean containsProduct = order.getItems().stream()
-                    .anyMatch(item -> item.getProduct() != null && item.getProduct().getId().equals(productId));
-            if (!containsProduct) {
-                throw new IllegalArgumentException("This order does not contain the specified product");
+            if (!orderItemRepository.existsByOrderIdAndProductId(orderId, productId)) {
+                throw new BadRequestException("This order does not contain the specified product");
             }
         }
         
@@ -86,12 +91,14 @@ public class ReviewService {
         return reviewRepository.count();
     }
 
+    @Transactional
     public void deleteReviewAsAdmin(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         reviewRepository.delete(review);
     }
 
+    @Transactional
     public ReviewResponse updateReview(Long productId, Long reviewId, ReviewRequest request) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
@@ -120,6 +127,7 @@ public class ReviewService {
         return toResponse(review);
     }
 
+    @Transactional
     public void deleteReview(Long productId, Long reviewId, Long userId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found"));

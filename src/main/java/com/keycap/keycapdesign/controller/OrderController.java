@@ -90,7 +90,8 @@ public class OrderController {
     @PreAuthorize("hasRole('STAFF')")
     public ApiResponse<OrderResponse> updateStatus(@PathVariable Long id,
             @Valid @RequestBody OrderStatusUpdateRequest request) {
-        return ApiResponse.success(orderService.updateStatus(id, request, Role.STAFF));
+        return ApiResponse.success(orderService.updateStatus(
+                id, request, Role.STAFF, currentUserService.getCurrentUserId()));
     }
 
     @PutMapping("/{id}/cancel")

@@ -170,7 +170,8 @@ public class OrderService {
     }
 
     public List<OrderResponse> listOrdersForStaff(Long staffId) {
-        return listResponses("staff-orders", orderRepository.findByAssignedStaffIdOrderByCreatedAtDesc(staffId));
+        return listResponses("staff-orders",
+                orderRepository.findByTypeOrAssignedStaffIdOrderByCreatedAtDesc(OrderType.SHOP, staffId));
     }
 
     public Page<OrderResponse> listAllOrders(Pageable pageable) {
@@ -211,7 +212,8 @@ public class OrderService {
     }
 
     public Page<OrderResponse> listOrdersForStaff(Long staffId, Pageable pageable) {
-        return toResponsePage("staff-orders-paged", orderRepository.findByAssignedStaffId(staffId, pageable), pageable);
+        return toResponsePage("staff-orders-paged",
+                orderRepository.findByTypeOrAssignedStaffId(OrderType.SHOP, staffId, pageable), pageable);
     }
 
     @Transactional
@@ -300,7 +302,7 @@ public class OrderService {
      * Staff: CONFIRMED → PROCESSING → SHIPPING → DELIVERED → COMPLETED.
      */
     @Transactional
-    public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request, Role actorRole) {
+    public OrderResponse updateStatus(Long id, OrderStatusUpdateRequest request, Role actorRole, Long actorId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
@@ -317,9 +319,16 @@ public class OrderService {
                 throw new BadRequestException("Admin can only confirm PENDING orders");
             }
         } else if (actorRole == Role.STAFF) {
-            // Staff handles CONFIRMED+
+            if (order.getType() == OrderType.CUSTOM
+                    && (order.getAssignedStaff() == null || !order.getAssignedStaff().getId().equals(actorId))) {
+                throw new BadRequestException("Only the assigned staff can update this custom order");
+            }
+            // Staff confirms SHOP orders and handles later processing steps.
             boolean valid = false;
             switch (currentStatus) {
+                case PENDING:
+                    if (order.getType() == OrderType.SHOP && newStatus == OrderStatus.CONFIRMED) valid = true;
+                    break;
                 case CONFIRMED:
                     if (newStatus == OrderStatus.PROCESSING) valid = true;
                     break;
@@ -380,6 +389,9 @@ public class OrderService {
     public OrderResponse assignStaffAndConfirm(Long id, Long staffId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (order.getType() != OrderType.CUSTOM) {
+            throw new BadRequestException("Shop orders do not require staff assignment");
+        }
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException("Cannot assign staff to a cancelled order");
         }

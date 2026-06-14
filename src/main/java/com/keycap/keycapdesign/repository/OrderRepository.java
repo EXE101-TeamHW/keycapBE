@@ -1,6 +1,7 @@
 package com.keycap.keycapdesign.repository;
 
 import com.keycap.keycapdesign.entity.Order;
+import com.keycap.keycapdesign.enums.OrderType;
 import com.keycap.keycapdesign.repository.projection.DashboardAggregateProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,13 +24,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findAllByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
-    List<Order> findByAssignedStaffIdOrderByCreatedAtDesc(Long staffId);
+    List<Order> findByTypeOrAssignedStaffIdOrderByCreatedAtDesc(OrderType type, Long staffId);
 
     @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
     Page<Order> findByUserId(Long userId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
-    Page<Order> findByAssignedStaffId(Long staffId, Pageable pageable);
+    Page<Order> findByTypeOrAssignedStaffId(OrderType type, Long staffId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
     Page<Order> findAll(Pageable pageable);
