@@ -27,15 +27,18 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
             CustomUserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder,
-            OAuth2SuccessHandler oAuth2SuccessHandler) {
+            OAuth2SuccessHandler oAuth2SuccessHandler,
+            OAuth2FailureHandler oAuth2FailureHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.oAuth2FailureHandler = oAuth2FailureHandler;
     }
 
     @Bean
@@ -56,7 +59,9 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payments/payos/webhook").permitAll()
                         .anyRequest().authenticated())
-                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler))
                 .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
                         (request, response, authException) -> response.sendError(HttpStatus.UNAUTHORIZED.value()),
                         request -> request.getRequestURI().startsWith("/api/")))

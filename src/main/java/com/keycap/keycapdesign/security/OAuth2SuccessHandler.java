@@ -32,7 +32,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.frontendLoginUrl = frontendUrl + "/login";
+        this.frontendLoginUrl = frontendUrl.replaceAll("/+$", "") + "/login";
     }
 
     @Override

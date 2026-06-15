@@ -81,6 +81,7 @@ Set these when their corresponding features are used:
 ```text
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI=https://<backend-domain>/login/oauth2/code/google
 GEMINI_API_KEY
 AI_SYSTEM_PASSWORD
 CLOUDINARY_CLOUD_NAME
@@ -137,6 +138,10 @@ https://<backend-domain>/login/oauth2/code/google
 PayOS webhook:
 https://<backend-domain>/api/payments/payos/webhook
 ```
+
+In Google Cloud Console, add the exact Google OAuth callback URL above to
+**Authorized redirect URIs**. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+must belong to the same OAuth 2.0 Web application client.
 
 For multiple frontend origins, use a comma-separated value:
 
