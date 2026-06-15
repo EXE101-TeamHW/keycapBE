@@ -28,17 +28,20 @@ public class SecurityConfig {
     private final PasswordEncoder passwordEncoder;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final CookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
             CustomUserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder,
             OAuth2SuccessHandler oAuth2SuccessHandler,
-            OAuth2FailureHandler oAuth2FailureHandler) {
+            OAuth2FailureHandler oAuth2FailureHandler,
+            CookieOAuth2AuthorizationRequestRepository authorizationRequestRepository) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
         this.oAuth2FailureHandler = oAuth2FailureHandler;
+        this.authorizationRequestRepository = authorizationRequestRepository;
     }
 
     @Bean
@@ -60,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/payments/payos/webhook").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestRepository(authorizationRequestRepository))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler))
                 .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
