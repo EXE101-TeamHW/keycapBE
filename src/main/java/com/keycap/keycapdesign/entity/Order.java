@@ -32,6 +32,9 @@ public class Order extends BaseEntity {
     @Column(name = "order_code", unique = true, nullable = false)
     private String orderCode;
 
+    @Column(name = "payos_order_code", unique = true)
+    private Long payOsOrderCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

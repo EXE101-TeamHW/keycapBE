@@ -72,9 +72,10 @@ public class PayOsService {
         if (order.getTotalAmount() == null || order.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Order total amount must be greater than zero");
         }
+        Long payOsOrderCode = ensurePayOsOrderCode(order);
 
         CreatePaymentLinkRequest paymentRequest = CreatePaymentLinkRequest.builder()
-                .orderCode(order.getId())
+                .orderCode(payOsOrderCode)
                 .amount(toPayOsAmount(order.getTotalAmount()))
                 .description(toDescription(order))
                 .returnUrl(returnUrl)
@@ -98,8 +99,8 @@ public class PayOsService {
 
     @Transactional
     public PayOsReturnResponse handleReturn(Map<String, String> queryParams) {
-        Long orderId = parseOrderCode(queryParams.get("orderCode"));
-        Order order = orderRepository.findById(orderId)
+        Long payOsOrderCode = parseOrderCode(queryParams.get("orderCode"));
+        Order order = findByPayOsOrderCodeOrLegacyId(payOsOrderCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String status = queryParams.get("status");
         boolean cancelled = isPayOsCancelled(queryParams);
@@ -127,12 +128,12 @@ public class PayOsService {
         validateConfig();
         try {
             WebhookData data = payOs().webhooks().verify(webhook);
-            Long orderId = data.getOrderCode();
-            Optional<Order> orderOptional = orderRepository.findById(orderId);
+            Long payOsOrderCode = data.getOrderCode();
+            Optional<Order> orderOptional = findByPayOsOrderCodeOrLegacyId(payOsOrderCode);
             if (orderOptional.isEmpty()) {
-                return new PayOsWebhookResponse(orderId,
+                return new PayOsWebhookResponse(null,
                         null,
-                        String.valueOf(orderId),
+                        String.valueOf(payOsOrderCode),
                         data.getPaymentLinkId(),
                         data.getReference(),
                         false,
@@ -156,7 +157,7 @@ public class PayOsService {
 
             return new PayOsWebhookResponse(order.getId(),
                     order.getOrderCode(),
-                    String.valueOf(orderId),
+                    String.valueOf(payOsOrderCode),
                     data.getPaymentLinkId(),
                     data.getReference(),
                     success,
@@ -196,9 +197,35 @@ public class PayOsService {
             separator = "&";
         }
         if (!normalizedUrl.contains("orderCode=")) {
-            normalizedUrl += separator + "orderCode=" + order.getId();
+            normalizedUrl += separator + "orderCode=" + ensurePayOsOrderCode(order);
         }
         return normalizedUrl;
+    }
+
+    private Long ensurePayOsOrderCode(Order order) {
+        if (order.getPayOsOrderCode() != null) {
+            return order.getPayOsOrderCode();
+        }
+        Long payOsOrderCode = generatePayOsOrderCode();
+        order.setPayOsOrderCode(payOsOrderCode);
+        return payOsOrderCode;
+    }
+
+    private Long generatePayOsOrderCode() {
+        Long payOsOrderCode;
+        do {
+            payOsOrderCode = System.currentTimeMillis() * 1000
+                    + java.util.concurrent.ThreadLocalRandom.current().nextLong(1000);
+        } while (orderRepository.existsByPayOsOrderCode(payOsOrderCode));
+        return payOsOrderCode;
+    }
+
+    private Optional<Order> findByPayOsOrderCodeOrLegacyId(Long payOsOrderCode) {
+        Optional<Order> order = orderRepository.findByPayOsOrderCode(payOsOrderCode);
+        if (order.isPresent()) {
+            return order;
+        }
+        return orderRepository.findById(payOsOrderCode);
     }
 
     private Long parseOrderCode(String orderCode) {

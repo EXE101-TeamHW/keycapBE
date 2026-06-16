@@ -42,6 +42,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
     Optional<Order> findByTicketId(Long ticketId);
 
+    @EntityGraph(attributePaths = {"user", "assignedStaff", "ticket"})
+    Optional<Order> findByPayOsOrderCode(Long payOsOrderCode);
+
+    boolean existsByPayOsOrderCode(Long payOsOrderCode);
+
     @EntityGraph(attributePaths = {"ticket"})
     List<Order> findByTicketIdIn(List<Long> ticketIds);
 
