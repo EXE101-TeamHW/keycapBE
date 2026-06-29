@@ -28,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -127,6 +128,11 @@ public class AdminController {
     @GetMapping("/reviews/count")
     public ApiResponse<Long> countReviews() {
         return ApiResponse.success(reviewService.countReviews());
+    }
+
+    @GetMapping("/reviews/average-rating")
+    public ApiResponse<BigDecimal> averageReviewRating() {
+        return ApiResponse.success(reviewService.averageRating());
     }
 
     @DeleteMapping("/reviews/{id}")

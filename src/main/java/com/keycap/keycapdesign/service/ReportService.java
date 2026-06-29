@@ -6,6 +6,7 @@ import com.keycap.keycapdesign.dto.report.TrendItem;
 import com.keycap.keycapdesign.dto.report.DashboardSummaryResponse;
 import com.keycap.keycapdesign.repository.CustomRequestRepository;
 import com.keycap.keycapdesign.repository.OrderRepository;
+import com.keycap.keycapdesign.repository.ReviewRepository;
 import com.keycap.keycapdesign.repository.TicketRepository;
 import com.keycap.keycapdesign.repository.UserRepository;
 import com.keycap.keycapdesign.repository.projection.DashboardAggregateProjection;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,13 +31,16 @@ public class ReportService {
     private final TicketRepository ticketRepository;
     private final CustomRequestRepository customRequestRepository;
     private final UserRepository userRepository;
+    private final ReviewRepository reviewRepository;
 
     public ReportService(OrderRepository orderRepository, TicketRepository ticketRepository,
-                         CustomRequestRepository customRequestRepository, UserRepository userRepository) {
+                         CustomRequestRepository customRequestRepository, UserRepository userRepository,
+                         ReviewRepository reviewRepository) {
         this.orderRepository = orderRepository;
         this.ticketRepository = ticketRepository;
         this.customRequestRepository = customRequestRepository;
         this.userRepository = userRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     public List<RevenueReportItem> revenue(LocalDate from, LocalDate to, String groupBy) {
@@ -89,6 +94,8 @@ public class ReportService {
                 toBigDecimal(aggregate.getTotalHeldDeposits()),
                 toBigDecimal(aggregate.getTotalPendingRefunds()),
                 toBigDecimal(aggregate.getTotalRefundedDeposits()),
+                reviewRepository.count(),
+                averageReviewRating(),
                 statusCounts);
         logPerformance("summary", startedAt);
         return result;
@@ -105,5 +112,17 @@ public class ReportService {
 
     private BigDecimal toBigDecimal(Object value) {
         return value == null ? BigDecimal.ZERO : new BigDecimal(value.toString());
+    }
+
+    private BigDecimal averageReviewRating() {
+        List<Integer> ratings = reviewRepository.findRatings();
+        if (ratings.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        double averageRating = ratings.stream()
+                .mapToInt(Integer::intValue)
+                .average()
+                .orElse(0);
+        return BigDecimal.valueOf(averageRating).setScale(2, RoundingMode.HALF_UP);
     }
 }

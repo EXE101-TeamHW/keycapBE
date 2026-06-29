@@ -20,5 +20,7 @@ public record DashboardSummaryResponse(
         BigDecimal totalHeldDeposits,
         BigDecimal totalPendingRefunds,
         BigDecimal totalRefundedDeposits,
+        long reviewCount,
+        BigDecimal averageReviewRating,
         Map<String, Long> orderStatusCounts) {
 }
